@@ -1,0 +1,23 @@
+# Finais de linha normalizados (LF no repositório)
+* text=auto eol=lf
+
+# Arquivos do Godot como texto
+*.gd text
+*.tscn text
+*.tres text
+*.godot text
+*.cfg text
+*.json text
+*.csv text
+*.md text
+
+# Binários
+*.png binary
+*.jpg binary
+*.webp binary
+*.ogg binary
+*.wav binary
+*.mp3 binary
+*.ttf binary
+*.otf binary
+*.woff2 binary

@@ -1,0 +1,26 @@
+# Godot 4
+.godot/
+.import/
+*.translation
+/android/
+# export_presets.cfg fica versionado: no Godot 4 as credenciais de exportação ficam em .godot/
+
+# Builds
+build/
+dist/
+*.exe
+*.pck
+*.zip
+
+# Segredos (Steamworks, tokens) — nunca no repositório
+.env
+*.env
+steam_appid.txt
+secrets/
+
+# Sistema / editores
+.DS_Store
+Thumbs.db
+*.tmp
+.vscode/
+.idea/

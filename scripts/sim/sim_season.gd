@@ -71,6 +71,10 @@ func _intensity_of(info: Dictionary) -> float:
 	return minf(_max, base_intensity(info.year) * f)  # teto sobre a efetiva (D-025)
 
 
+func max_intensity() -> float:
+	return _max
+
+
 ## Intensidade da fórmula do ano, sem variação nem teto.
 func base_intensity(year: int) -> float:
 	return 1.0 + _per_year * (year - 1)

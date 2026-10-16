@@ -146,3 +146,14 @@ func test_calendario_sem_severas_e_com_uma_so() -> void:
 	assert_eq(out.season, "seca")
 	assert_eq(out.days, 160, "seca do ano seguinte")
 	assert_true(out.low <= out.real and out.real <= out.high)
+
+
+func test_faixa_respeita_o_teto() -> void:
+	var sim := _sim()
+	sim.season.factors["9/seca"] = 1.15
+	sim.forecast.table["9/seca"] = {"f": 1.15, "e": 1.0}
+	sim.calendar.day_index = 8 * 360 - 10  # 10 dias antes da seca do ano 9
+	var f: Dictionary = sim.forecast.forecast(sim.calendar, sim.season, true)
+	var cap: float = sim.data.section("season").intensity_max
+	assert_true(f.high <= cap and f.center <= cap, "%s" % [f])
+	assert_true(f.low <= f.real and f.real <= f.high)

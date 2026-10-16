@@ -282,7 +282,7 @@ func _buildings_text(s: Dictionary) -> String:
 func waiting_hint(b: Dictionary, lab: Dictionary) -> String:
 	if b.ruins_remaining <= 0.0:
 		return tr("HUD_HINT_RUINS_EMPTY")
-	if lab.desired.salvage == 0:
+	if lab.desired.salvage + _pending.get("salvage", 0) == 0:
 		return tr("HUD_HINT_SALVAGE")
 	return tr("HUD_HINT_SALVAGING")
 

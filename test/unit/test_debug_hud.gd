@@ -13,6 +13,10 @@ func before_each() -> void:
 	add_child_autofree(hud)
 
 
+func after_each() -> void:
+	Game.sim.loop.take_commands()  # nada de comando sobrando no autoload
+
+
 func _lab(desired: Dictionary, workers: int, changed: bool = true) -> Dictionary:
 	return {"desired": desired, "workers": workers, "productivity": 1.0, "changed": changed}
 
@@ -39,7 +43,6 @@ func test_ajuste_pendente_entra_na_conta_e_nao_trava() -> void:
 	assert_eq(hud._pending.salvage, 1, "+1 aceito mesmo com pedido acima dos trabalhadores")
 	assert_true(hud.labor_text(lab, hud._pending).contains("1→"))
 	hud._pending.clear()
-	Game.sim.loop.take_commands()  # não deixar comando no autoload para outros testes
 
 
 func test_dica_de_materiais() -> void:
@@ -85,3 +88,35 @@ func test_pedido_de_obra_aparece_antes_do_dia_passar() -> void:
 	var text: String = hud._buildings_text(hud._last_snapshot)
 	assert_true(text.contains(tr("BUILDING_SILO")), text)
 	hud._pending_builds.clear()
+
+
+func test_dica_considera_ajuste_pendente() -> void:
+	hud._pending = {"salvage": 1}
+	assert_eq(hud.waiting_hint({"ruins_remaining": 800.0}, {"desired": {"salvage": 0}}),
+		tr("HUD_HINT_SALVAGING"))
+	hud._pending.clear()
+
+
+func test_real_exibido_bate_com_sim_labor() -> void:
+	var sim := Simulation.new()
+	assert_true(sim.setup(1))
+	for t in ["water", "farm", "care", "build", "salvage"]:
+		sim.enqueue({"type": "set_labor", "task": t, "value": [7, 13, 5, 4, 2][["water", "farm", "care", "build", "salvage"].find(t)]})
+	sim.population.families.resize(5)  # ~ 21 pessoas → 12 trabalhadores, pedido 31
+	sim.step_day()
+	var lab: Dictionary = sim.snapshot().labor
+	var text: String = hud.labor_text(lab, {})
+	for t in DataRegistry.TASK_IDS:
+		assert_true(text.contains("%d→%d" % [lab.desired[t], roundi(lab.assigned[t])]),
+			"%s: %s" % [t, text])
+
+
+func test_simulacao_publica_posicao_na_fila() -> void:
+	var sim := Simulation.new()
+	assert_true(sim.setup(1))
+	sim.enqueue({"type": "build", "building": "silo"})
+	sim.enqueue({"type": "build", "building": "cisterna"})
+	sim.step_day()
+	var q := sim.drain_events().filter(func(e: Dictionary) -> bool: return e.type == "build_queued")
+	assert_eq(q.map(func(e: Dictionary) -> int: return e.position), [1, 2])
+	assert_eq(q[0].max, int(sim.data.section("buildings").max_queue))

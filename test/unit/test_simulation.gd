@@ -130,7 +130,7 @@ func test_ano_2_sem_jogador_falta_comida_na_seca() -> void:
 	sim.drain_events()
 	_run(sim, 90)  # seca do ano 2
 	assert_eq(sim.calendar.season_id(), "seca")
-	assert_eq(sim.snapshot().intensity, 1.15)
+	assert_almost_eq(sim.snapshot().intensity, 1.15, 1e-9)
 	assert_gt(_shortages(sim.drain_events(), "food"), 0, "linha de base precisa quebrar no ano 2")
 
 

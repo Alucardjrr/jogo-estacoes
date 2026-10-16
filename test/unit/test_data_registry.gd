@@ -213,3 +213,11 @@ func test_resources_valores_invalidos() -> void:
 	assert_true(_has_error(reg, "placeholder_population: precisa ser inteiro"))
 	assert_true(_has_error(reg, "capacity = 0"))
 	assert_true(_has_error(reg, "resources.water: precisa ser um objeto"))
+
+
+func test_calendario_invalido_nao_gera_ruido_na_checagem_cruzada() -> void:
+	var cal := CAL_OK.duplicate(true)
+	cal.seasons[1].id = "Chuvas Fortes"
+	var reg := _load_with(SIM_OK, cal)
+	assert_true(_has_error(reg, "id inválido"))
+	assert_false(_has_error(reg, "season.json"), "erros: %s" % [reg.errors])

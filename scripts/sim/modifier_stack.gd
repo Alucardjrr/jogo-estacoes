@@ -5,7 +5,8 @@ extends RefCounted
 ## publica limpa só o que é seu com clear_source() e publica de novo.
 ##
 ## Valor final de uma chave: (base + soma dos "add") × produto dos "mul".
-## A ordem de publicação não muda o resultado.
+## Matematicamente a ordem não importa; em float pode variar no último dígito,
+## por isso a ordem de publicação é a ordem fixa do tick (determinismo).
 
 var _entries: Array[Dictionary] = []  # {key, source, add, mul}
 

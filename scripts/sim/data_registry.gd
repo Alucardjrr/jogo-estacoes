@@ -32,10 +32,15 @@ func load_all(dir: String = DEFAULT_DIR) -> bool:
 	var parsed := {}
 	if loaded.sim is Dictionary:
 		parsed.sim = _parse_sim(loaded.sim, "sim.json")
+	var calendar_ok := false
 	if loaded.calendar is Dictionary:
+		var before := errors.size()
 		parsed.calendar = _parse_calendar(loaded.calendar, "calendar.json")
+		calendar_ok = errors.size() == before
 	if loaded.season is Dictionary:
-		parsed.season = _parse_season(loaded.season, "season.json", parsed.get("calendar", {}))
+		# Checagem cruzada só com calendário válido, para não somar ruído ao erro real.
+		parsed.season = _parse_season(loaded.season, "season.json",
+			parsed.calendar if calendar_ok else {})
 	if loaded.resources is Dictionary:
 		parsed.resources = _parse_resources(loaded.resources, "resources.json")
 	if not errors.is_empty():

@@ -40,6 +40,26 @@ func test_teto_descarta_o_excesso() -> void:
 	assert_eq(r.last_flow.water.overflow, 390.0)  # 100 + 500 − 10 − 200
 
 
+func test_teto_antes_da_perda() -> void:
+	var r := SimResources.new(CFG)
+	r.step(10, _mods(500.0, 0.1, 0.0, 0.0))
+	# 100 + 500 − 10 = 590 → teto 200 (overflow 390) → perda 10% = 20
+	assert_almost_eq(r.stock.water, 180.0, 1e-9)
+	assert_almost_eq(r.last_flow.water.overflow, 390.0, 1e-9)
+	assert_almost_eq(r.last_flow.water.lost, 20.0, 1e-9)
+
+
+func test_entrada_antes_do_consumo() -> void:
+	var cfg := CFG.duplicate(true)
+	cfg.resources.water.initial = 0.0
+	var r := SimResources.new(cfg)
+	var events := r.step(10, _mods(20.0, 0.0, 30.0, 0.0))
+	assert_eq(events.filter(func(e: Dictionary) -> bool: return e.resource == "water"), [],
+		"entrada do dia cobre o consumo do dia")
+	assert_eq(r.last_flow.water.consumed, 10.0)
+	assert_eq(r.stock.water, 10.0)
+
+
 func test_falta_gera_evento_e_estoque_nao_fica_negativo() -> void:
 	var r := SimResources.new(CFG)
 	var events := r.step(40, _mods(0.0, 0.0, 0.0, 0.0))  # comida: 50 − 80

@@ -80,7 +80,8 @@ func step(labor: SimLabor, season_id: String, modifiers: ModifierStack) -> Array
 	if ruins_initial > 0.0:
 		var frac_left := ruins_remaining / ruins_initial
 		var got := minf(ruins_remaining,
-			labor.effective.salvage * _cfg.salvage_per_worker * frac_left)
+			labor.effective.salvage * _cfg.salvage_per_worker * frac_left
+			* maxf(modifiers.value("salvage_mult", 1.0), 0.0))
 		ruins_remaining -= got
 		materials += got
 		if labor.workers > 0:
@@ -99,7 +100,8 @@ func step(labor: SimLabor, season_id: String, modifiers: ModifierStack) -> Array
 		last_wear_points += lost * _cfg.points_per_condition
 
 	# 3. Obras: reparo primeiro (pior condição primeiro), depois construção
-	var points: float = labor.effective.build * _cfg.work_points_per_worker
+	var points: float = labor.effective.build * _cfg.work_points_per_worker \
+		* maxf(modifiers.value("build_mult", 1.0), 0.0)
 	var points_before := points
 	var per_pct: float = _cfg.points_per_condition * _cfg.repair_cost_mult.get(season_id, 1.0)
 	var order := range(instances.size())

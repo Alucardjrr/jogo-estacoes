@@ -171,7 +171,7 @@ func test_snapshot_de_recursos_e_modificadores() -> void:
 	assert_eq(s.health, 80.0)
 	assert_eq(s.resources.water.stock, 4500.0)
 	assert_eq(s.resources.water.capacity, 6000.0)
-	assert_eq(s.modifiers.size(), DataRegistry.SEASON_KEYS.size() + 3, "estação + mão de obra do dia 1")
+	assert_eq(s.modifiers.size(), DataRegistry.SEASON_KEYS.size() + 5, "estação + 2 curvas sociais + mão de obra do dia 1")
 	assert_eq(s.labor.desired, sim.data.section("labor").initial_allocation)
 	_run(sim, 1)
 	assert_eq(sim.snapshot().resources.food.consumed, 50.0)
@@ -190,7 +190,7 @@ func test_setup_reinicia_recursos() -> void:
 	_run(sim, 100)
 	assert_true(sim.setup(7))
 	assert_eq(sim.resources.stock.water, 4500.0)
-	assert_eq(sim.modifiers.entries().size(), DataRegistry.SEASON_KEYS.size() + 3)
+	assert_eq(sim.modifiers.entries().size(), DataRegistry.SEASON_KEYS.size() + 5)
 	assert_false(sim.labor.changed)
 
 

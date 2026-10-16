@@ -27,10 +27,17 @@ const LAB_OK := {"worker_share": 0.6, "full_productivity_health": 60, "min_produ
 	"care_health_max": 2.0, "fatigue_threshold": 0.5, "fatigue_health": 0.4,
 	"initial_allocation": {"water": 9, "farm": 18, "care": 3, "build": 0, "salvage": 0}}
 const SEASONS_2 := {"seca": 0.1, "chuvas": 0.3}
+const SOC_OK := {"trust_initial": 75, "cohesion_initial": 75, "recovery_per_day": 0.05,
+	"shortage_trust_per_day": 0.3, "death_cohesion": 1, "left_cohesion": 2, "low_threshold": 30,
+	"trust_productivity": {"full_at": 70, "mid_at": 30, "mid_mult": 0.9, "zero_mult": 0.7},
+	"cohesion_departure": {"full_at": 70, "mid_at": 30, "mid_mult": 0.8, "zero_mult": 0.5},
+	"residual_fraction": 0.333, "repeat_cost_increase": 0.5, "one_per_season": true,
+	"measures": {"racionamento": {"seasons": ["seca"], "trust_cost": 15, "cohesion_cost": 0,
+		"effects": [{"key": "water_consumption", "mul": 0.6}]}}}
 const NAR_OK := {"hard_shortage_days": 10, "residents": 12, "diary_lines": 3,
 	"season_group": {"seca": "SECA", "chuvas": "CHUVAS"},
 	"reaction_lines": {"DEATH": 4, "FAMILY_LEFT": 4, "BUILDING_DONE": 4, "SHORTAGE_WATER": 3,
-		"SHORTAGE_FOOD": 3, "SEASON_SECA": 2, "SEASON_CHUVAS": 2}}
+		"SHORTAGE_FOOD": 3, "SEASON_SECA": 2, "SEASON_CHUVAS": 2, "MEASURE_RACIONAMENTO": 2}}
 const BLD_OK := {"work_points_per_worker": 1.0, "points_per_condition": 2.0,
 	"low_condition_threshold": 60, "low_condition_wear_mult": 1.5,
 	"repair_cost_mult": {"seca": 1.0, "chuvas": 1.0}, "salvage_per_worker": 1.0,
@@ -60,7 +67,7 @@ func _write(name: String, content: Variant) -> void:
 
 func _load_with(sim: Variant, cal: Variant, season: Variant = SEASON_OK,
 		res: Variant = RES_OK, pop: Variant = POP_OK, lab: Variant = LAB_OK,
-		bld: Variant = BLD_OK, nar: Variant = NAR_OK) -> DataRegistry:
+		bld: Variant = BLD_OK, nar: Variant = NAR_OK, soc: Variant = SOC_OK) -> DataRegistry:
 	_write("sim.json", sim)
 	_write("calendar.json", cal)
 	_write("season.json", season)
@@ -69,6 +76,7 @@ func _load_with(sim: Variant, cal: Variant, season: Variant = SEASON_OK,
 	_write("labor.json", lab)
 	_write("buildings.json", bld)
 	_write("narrative.json", nar)
+	_write("social.json", soc)
 	var reg := DataRegistry.new()
 	reg.load_all(TMP_DIR)
 	return reg
@@ -413,3 +421,38 @@ func test_narrative_grupos_e_linhas() -> void:
 	assert_true(_has_error(reg, "falta a chave 'chuvas'"))
 	assert_true(_has_error(reg, "chave desconhecida 'inverno'"))
 	assert_true(_has_error(reg, "reaction_lines: falta a chave 'DEATH'"))
+
+
+# --- social.json ---
+
+func _soc(soc: Dictionary) -> DataRegistry:
+	return _load_with(SIM_OK, CAL_OK, SEASON_OK, RES_OK, POP_OK, LAB_OK, BLD_OK, NAR_OK, soc)
+
+
+func test_social_valido() -> void:
+	var reg := _soc(SOC_OK)
+	assert_true(reg.is_loaded(), "erros: %s" % [reg.errors])
+	assert_eq(reg.section("social").measures.racionamento.seasons, ["seca"])
+
+
+func test_social_medida_invalida() -> void:
+	var soc := SOC_OK.duplicate(true)
+	soc.measures["x"] = {"seasons": ["neve"], "trust_cost": 200, "cohesion_cost": 0,
+		"effects": [{"key": "ouro", "add": 1}, {"key": "farm_mult", "add": 1, "seasons": ["seca"]}],
+		"after_days": 5, "foo": 1}
+	var reg := _soc(soc)
+	assert_true(_has_error(reg, "estação 'neve'"))
+	assert_true(_has_error(reg, "trust_cost = 200"))
+	assert_true(_has_error(reg, "key inválida 'ouro'"))
+	assert_true(_has_error(reg, "after_days sem after_effects"))
+	assert_true(_has_error(reg, "chave desconhecida 'foo'"))
+	assert_true(_has_error(reg, "effects[1]: chave desconhecida 'seasons'"), "efeito de medida não filtra estação")
+
+
+func test_social_curva_e_medida_sem_fala() -> void:
+	var soc := SOC_OK.duplicate(true)
+	soc.trust_productivity.mid_at = 80
+	soc.measures["outra"] = SOC_OK.measures.racionamento.duplicate(true)
+	var reg := _soc(soc)
+	assert_true(_has_error(reg, "mid_at maior que full_at"))
+	assert_true(_has_error(reg, "reaction_lines: falta a chave 'MEASURE_OUTRA'"))

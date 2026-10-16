@@ -88,11 +88,26 @@ frações por dia (0,004 = 0,4% do estoque por dia).
 | `types.<id>.wear` | {estação: número} | todas as estações | Condição perdida por dia (%) |
 | `types.<id>.effects[]` | lista | — | `{key, add \| mul, seasons?, requires_water?}`; efeito × condição/100; `key` em `DataRegistry.BUILDING_EFFECT_KEYS` |
 
+## balance/social.json — medidores e medidas (GDD 6; D-035..D-038)
+| Campo | Tipo | Faixa | O que é |
+|---|---|---|---|
+| `trust_initial` / `cohesion_initial` | número | 0–100 | Fé na liderança / Vizinhança no início |
+| `recovery_per_day` | número | 0–100 | Ganho diário dos dois medidores em dia sem falta (até o teto) |
+| `shortage_trust_per_day` | número | 0–100 | Fé perdida por dia com falta |
+| `death_cohesion` / `left_cohesion` | número | 0–100 | Vizinhança perdida por morte / por família que parte |
+| `low_threshold` | número | 0–100 | Abaixo disso o medidor gera aviso |
+| `trust_productivity` / `cohesion_departure` | curva | `full_at`, `mid_at`, `mid_mult`, `zero_mult` | 1 em ≥ full_at; linear até mid_mult em mid_at; até zero_mult em 0. Fé → produtividade; Vizinhança → prazo até famílias partirem |
+| `residual_fraction` | número | 0–1 | Parte do custo que baixa o teto do medidor para sempre |
+| `repeat_cost_increase` | número | 0–10 | Custo × (1 + isto × usos anteriores) |
+| `one_per_season` | bool | — | Só uma medida sazonal por estação (D-035) |
+| `measures.<id>` | objeto | ids do GDD 6 | `seasons` (vazio = qualquer), `trust_cost`, `cohesion_cost`, `effects[]` (`{key, add \| mul}` em `DataRegistry.SOCIAL_EFFECT_KEYS`), opcionais `full_residual`, `exempt_one_per_season`, `unlock_water_below` (desespero), `instant_water_days` (água na hora × pessoas), `after_days` + `after_effects[]` (efeito depois que a medida acaba) |
+
 ## Runner de balanceamento
 `godot --headless --path . -s tools/balance_runner.gd -- --seeds=10 --years=3` roda as
 estratégias de referência. Opções no cabeçalho de `tools/balance_runner.gd`
 (`--fixed=`, `--plan=`, `--builds=`, `--search`, `--data=` para testar números em outra pasta).
-Estratégias em código (`tools/balance/balance_run.gd`) aceitam também `by_year` (plano por ano).
+Estratégias em código (`tools/balance/balance_run.gd`) aceitam também `by_year` (plano por ano),
+`measures` (medida por estação), `desperation` e `desperation_once` (Requisição).
 `test/unit/test_balanceamento.gd` trava a curva de dificuldade e o critério D-013.
 
 ## text/*.csv — textos (D-024)

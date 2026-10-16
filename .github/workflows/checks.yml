@@ -1,0 +1,62 @@
+# Checagens automáticas (D-023): compila, inicia o jogo e roda os testes GUT
+# em todo PR e push na main. Ações fixadas por SHA (protocolo 6: versões fixadas).
+name: checks
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: checks-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  GODOT_VERSION: 4.7.2-stable
+  GODOT_FILE: Godot_v4.7.2-stable_linux.x86_64
+
+jobs:
+  tests:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Cache do Godot
+        id: cache-godot
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ~/godot
+          key: godot-${{ env.GODOT_VERSION }}-linux-x86_64
+
+      - name: Baixar Godot (checksum SHA512 oficial)
+        if: steps.cache-godot.outputs.cache-hit != 'true'
+        run: |
+          set -euo pipefail
+          mkdir -p ~/godot && cd ~/godot
+          base="https://github.com/godotengine/godot-builds/releases/download/${GODOT_VERSION}"
+          curl -sSLf -o godot.zip "$base/${GODOT_FILE}.zip"
+          curl -sSLf -o SHA512-SUMS.txt "$base/SHA512-SUMS.txt"
+          expected=$(grep " ${GODOT_FILE}.zip$" SHA512-SUMS.txt | awk '{print $1}')
+          test -n "$expected"
+          echo "$expected  godot.zip" | sha512sum -c
+          unzip -q godot.zip && rm godot.zip
+          chmod +x "${GODOT_FILE}"
+
+      - name: Checagens
+        run: |
+          export GODOT="$HOME/godot/${GODOT_FILE}"
+          bash tools/run_checks.sh
+
+      - name: Logs
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: logs-checagens
+          path: .check-logs/
+          include-hidden-files: true
+          retention-days: 7

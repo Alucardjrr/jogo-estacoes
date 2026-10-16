@@ -7,13 +7,19 @@ signal day_passed(snapshot: Dictionary, events: Array[Dictionary])
 signal speed_changed(paused: bool, speed: int)
 
 var sim := Simulation.new()
+var settings := GameSettings.new()
+## Caminho das preferências; os testes trocam para não mexer no arquivo real.
+var settings_path := GameSettings.PATH
 var ready_ok := false
 var paused := true
 var speed_index := 0
 
 
 func _ready() -> void:
-	TranslationServer.set_locale("pt_BR")
+	_apply_settings()
+	for arg in OS.get_cmdline_user_args():
+		if arg.begins_with("--locale="):  # só nesta execução, não salva
+			_set_locale(arg.trim_prefix("--locale="), false)
 	ready_ok = sim.setup()
 	if not ready_ok:
 		for e in sim.data.errors:
@@ -51,3 +57,34 @@ func set_speed_index(index: int) -> void:
 	speed_index = clampi(index, 0, speeds().size() - 1)
 	paused = false
 	speed_changed.emit(paused, current_speed())
+
+
+# --- Idioma (D-024) ---
+
+func current_locale() -> String:
+	return TranslationServer.get_locale()
+
+
+## Alterna para o próximo idioma suportado e salva a escolha.
+func cycle_locale() -> void:
+	_set_locale(settings.next_locale(current_locale()), true)
+
+
+func _apply_settings() -> void:
+	settings.load_from(settings_path)
+	for w in settings.warnings:
+		push_warning("[settings] " + w)
+	TranslationServer.set_locale(settings.resolve_locale(OS.get_locale()))
+
+
+## Retorna false se o idioma não é suportado (nada muda).
+func _set_locale(locale: String, persist: bool) -> bool:
+	if not GameSettings.SUPPORTED_LOCALES.has(locale):
+		push_warning("[settings] idioma não suportado: " + locale)
+		return false
+	TranslationServer.set_locale(locale)
+	if persist:
+		settings.locale = locale
+		if not settings.save_to(settings_path):
+			push_warning("[settings] não foi possível salvar " + settings_path)
+	return true

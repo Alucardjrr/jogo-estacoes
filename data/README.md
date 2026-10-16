@@ -111,6 +111,15 @@ frações por dia (0,004 = 0,4% do estoque por dia).
 | `horizon_days` | inteiro | ≥ 1 | Distância a partir da qual a margem é a máxima |
 | `levels[]` | lista | `below` crescente; último sem `below` | Níveis de severidade (Branda / Dura / Implacável) |
 
+## balance/campaign.json — campanha (D-046, D-047)
+| Campo | Tipo | Faixa | O que é |
+|---|---|---|---|
+| `years` | inteiro | 2–100 | A partida termina no último dia deste ano (ou antes, se a colônia esvaziar) |
+| `outcomes[]` | lista | `from` crescente; o primeiro sem `from` | Desfechos pela fração da população inicial que ficou; texto em `OUTCOME_<ID>` e `DIARY_END_<ID>`; perdas em `DIARY_END_LOSS_<BOTH/DEATHS/LEFT/NONE>` |
+
+Medidas novas são recusadas nos últimos N dias, N = maior `after_days` de `social.json` (nenhuma cobrança fica depois do fim).
+`narrative.json` ganhou `campaign_resident` (morador que avisa do último ano, 1 = RESIDENT_01, ≤ `residents`) e `reaction_lines.CAMPAIGN_FINAL_YEAR`.
+
 ## Runner de balanceamento
 `godot --headless --path . -s tools/balance_runner.gd -- --seeds=10 --years=3` roda as
 estratégias de referência. Opções no cabeçalho de `tools/balance_runner.gd`

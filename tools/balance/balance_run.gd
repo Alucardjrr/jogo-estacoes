@@ -35,6 +35,8 @@ static func play(strategy: Dictionary, seed_number: int, years: int,
 	out.building_water_by_season = {}
 	out.water_deficit_by_season = {}
 	for _d in days:
+		if sim.campaign.ended:
+			break  # campanha acabou (prazo ou colônia vazia): o resto repete o fim
 		if strategy.has("policy"):
 			for c in strategy.policy.decide(sim):
 				sim.enqueue(c)
@@ -71,6 +73,9 @@ static func play(strategy: Dictionary, seed_number: int, years: int,
 		out.health_min = minf(out.health_min, sim.population.health)
 		if sim.calendar.day_index % sim.calendar.days_per_year() == 0:
 			out.population_by_year.append(sim.population.people())
+	# Anos depois do fim da campanha repetem a população final.
+	while out.population_by_year.size() < years:
+		out.population_by_year.append(sim.population.people())
 	out.population = sim.population.people()
 	out.social = sim.social.snapshot()
 	return out

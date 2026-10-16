@@ -48,6 +48,7 @@ func load_all(dir: String = DEFAULT_DIR) -> bool:
 		"narrative": _load_json(dir.path_join("narrative.json")),
 		"social": _load_json(dir.path_join("social.json")),
 		"forecast": _load_json(dir.path_join("forecast.json")),
+		"campaign": _load_json(dir.path_join("campaign.json")),
 	}
 	var parsed := {}
 	if loaded.sim is Dictionary:
@@ -75,6 +76,8 @@ func load_all(dir: String = DEFAULT_DIR) -> bool:
 	if loaded.narrative is Dictionary:
 		parsed.narrative = _parse_narrative(loaded.narrative, "narrative.json",
 			parsed.calendar if calendar_ok else {}, parsed.get("social", {}))
+	if loaded.campaign is Dictionary:
+		parsed.campaign = _parse_campaign(loaded.campaign, "campaign.json")
 	if loaded.buildings is Dictionary:
 		parsed.buildings = _parse_buildings(loaded.buildings, "buildings.json",
 			parsed.calendar if calendar_ok else {})
@@ -89,8 +92,8 @@ func is_loaded() -> bool:
 
 
 ## Dados já normalizados (ints como int) de um sistema: "sim", "calendar",
-## "season", "resources", "population", "labor", "buildings", "narrative", "social"
-## ou "forecast".
+## "season", "resources", "population", "labor", "buildings", "narrative", "social",
+## "forecast" ou "campaign".
 func section(name: String) -> Dictionary:
 	return _data.get(name, {})
 
@@ -420,21 +423,24 @@ func _parse_buildings(d: Dictionary, src: String, calendar: Dictionary) -> Dicti
 ## Narrative (D-034): quantas linhas de texto existem por chave-base. Os textos em si
 ## ficam no CSV; o teste de traduções garante que toda chave derivada daqui existe.
 const REACTION_IDS: PackedStringArray = ["DEATH", "FAMILY_LEFT", "BUILDING_DONE",
-	"SHORTAGE_WATER", "SHORTAGE_FOOD"]
+	"SHORTAGE_WATER", "SHORTAGE_FOOD", "CAMPAIGN_FINAL_YEAR"]
 var _group_regex := RegEx.create_from_string("^[A-Z][A-Z0-9_]*$")
 
 
 func _parse_narrative(d: Dictionary, src: String, calendar: Dictionary,
 		social: Dictionary = {}) -> Dictionary:
 	_check_keys(d, ["hard_shortage_days", "residents", "season_group", "diary_lines",
-		"reaction_lines"], src)
+		"reaction_lines", "campaign_resident"], src)
 	var out := {
 		"hard_shortage_days": _int(d, "hard_shortage_days", src, 0, 1000),
 		"residents": _int(d, "residents", src, 1, 99),
+		"campaign_resident": _int(d, "campaign_resident", src, 1, 99),
 		"diary_lines": _int(d, "diary_lines", src, 1, 99),
 		"season_group": {},
 		"reaction_lines": {},
 	}
+	if out.campaign_resident > out.residents:
+		errors.append("%s: campaign_resident maior que residents" % src)
 	if d.get("season_group") is Dictionary:
 		var g: Dictionary = d.season_group
 		var ids: Array = []
@@ -504,6 +510,32 @@ func _effects(list: Array, where: String, allowed_keys: PackedStringArray, seaso
 		else:
 			eff.add = _float(e, "add", ew, -100000.0, 100000.0)
 		out.append(eff)
+	return out
+
+
+## Campanha (D-046, D-047): duração e faixas de desfecho por fração da população inicial.
+func _parse_campaign(d: Dictionary, src: String) -> Dictionary:
+	_check_keys(d, ["years", "outcomes"], src)
+	# ≥ 2: o aviso do último ano sai na virada para ele.
+	var out := {"years": _int(d, "years", src, 2, 100), "outcomes": []}
+	var list := _array(d, "outcomes", src)
+	if list.is_empty() and d.has("outcomes"):
+		errors.append("%s: outcomes não pode ser vazio" % src)
+	var last := 0.0
+	for i in list.size():
+		var w := "%s: outcomes[%d]" % [src, i]
+		if not list[i] is Dictionary:
+			errors.append("%s: precisa ser um objeto {}" % w)
+			continue
+		var o: Dictionary = list[i]
+		_check_keys(o, ["id"] if i == 0 else ["id", "from"], w)
+		var entry := {"id": _id(o, "id", w)}
+		if i > 0:
+			entry.from = _float(o, "from", w, 0.0, 10.0)
+			if entry.from <= last:
+				errors.append("%s: from precisa ser crescente e maior que 0" % w)
+			last = entry.from
+		out.outcomes.append(entry)
 	return out
 
 

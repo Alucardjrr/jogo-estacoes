@@ -36,10 +36,13 @@ const SOC_OK := {"trust_initial": 75, "cohesion_initial": 75, "recovery_per_day"
 		"effects": [{"key": "water_consumption", "mul": 0.6}]}}}
 const FC_OK := {"variance": 0.18, "first_varied_year": 1, "k_far": 1.0, "k_near": 0.25, "horizon_days": 90,
 	"levels": [{"id": "branda", "below": 1.15}, {"id": "dura", "below": 1.45}, {"id": "implacavel"}]}
-const NAR_OK := {"hard_shortage_days": 10, "residents": 12, "diary_lines": 3,
+const CAMP_OK := {"years": 6, "outcomes": [{"id": "cai"}, {"id": "resistiu", "from": 0.3},
+	{"id": "de_pe", "from": 0.6}, {"id": "terra_boa", "from": 0.8}]}
+const NAR_OK := {"hard_shortage_days": 10, "residents": 12, "diary_lines": 3, "campaign_resident": 4,
 	"season_group": {"seca": "SECA", "chuvas": "CHUVAS"},
 	"reaction_lines": {"DEATH": 4, "FAMILY_LEFT": 4, "BUILDING_DONE": 4, "SHORTAGE_WATER": 3,
-		"SHORTAGE_FOOD": 3, "SEASON_SECA": 2, "SEASON_CHUVAS": 2, "MEASURE_RACIONAMENTO": 2}}
+		"SHORTAGE_FOOD": 3, "SEASON_SECA": 2, "SEASON_CHUVAS": 2, "MEASURE_RACIONAMENTO": 2,
+		"CAMPAIGN_FINAL_YEAR": 2}}
 const BLD_OK := {"work_points_per_worker": 1.0, "points_per_condition": 2.0,
 	"low_condition_threshold": 60, "low_condition_wear_mult": 1.5,
 	"repair_cost_mult": {"seca": 1.0, "chuvas": 1.0}, "salvage_per_worker": 1.0,
@@ -70,7 +73,7 @@ func _write(name: String, content: Variant) -> void:
 func _load_with(sim: Variant, cal: Variant, season: Variant = SEASON_OK,
 		res: Variant = RES_OK, pop: Variant = POP_OK, lab: Variant = LAB_OK,
 		bld: Variant = BLD_OK, nar: Variant = NAR_OK, soc: Variant = SOC_OK,
-		fc: Variant = FC_OK) -> DataRegistry:
+		fc: Variant = FC_OK, camp: Variant = CAMP_OK) -> DataRegistry:
 	_write("sim.json", sim)
 	_write("calendar.json", cal)
 	_write("season.json", season)
@@ -81,6 +84,7 @@ func _load_with(sim: Variant, cal: Variant, season: Variant = SEASON_OK,
 	_write("narrative.json", nar)
 	_write("social.json", soc)
 	_write("forecast.json", fc)
+	_write("campaign.json", camp)
 	var reg := DataRegistry.new()
 	reg.load_all(TMP_DIR)
 	return reg
@@ -472,3 +476,33 @@ func test_forecast_invalido() -> void:
 	assert_true(_has_error(reg, "k_near maior que k_far"))
 	assert_true(_has_error(reg, "below precisa ser crescente"))
 	assert_true(_has_error(reg, "levels[2]: chave desconhecida 'below'"), "o último nível não tem limite")
+
+
+# --- campaign.json ---
+
+func test_campanha_valida() -> void:
+	var reg := _load_with(SIM_OK, CAL_OK)
+	assert_eq(reg.errors, PackedStringArray())
+	assert_eq(reg.section("campaign").years, 6)
+	assert_eq(reg.section("campaign").outcomes[3], {"id": "terra_boa", "from": 0.8})
+
+
+func test_campanha_faixas_crescentes_e_chaves() -> void:
+	var camp := CAMP_OK.duplicate(true)
+	camp.outcomes[2].from = 0.2
+	camp.outcomes[0]["from"] = 0.1
+	var reg := _load_with(SIM_OK, CAL_OK, SEASON_OK, RES_OK, POP_OK, LAB_OK, BLD_OK, NAR_OK,
+		SOC_OK, FC_OK, camp)
+	assert_true(_has_error(reg, "outcomes[2]: from precisa ser crescente"))
+	assert_true(_has_error(reg, "outcomes[0]: chave desconhecida 'from'"))
+	reg = _load_with(SIM_OK, CAL_OK, SEASON_OK, RES_OK, POP_OK, LAB_OK, BLD_OK, NAR_OK,
+		SOC_OK, FC_OK, {"years": 0, "outcomes": []})
+	assert_true(_has_error(reg, "outcomes não pode ser vazio"))
+	assert_true(_has_error(reg, "campaign.json: years"))
+
+
+func test_narrative_morador_da_campanha_existe() -> void:
+	var nar := NAR_OK.duplicate(true)
+	nar.campaign_resident = 13
+	var reg := _load_with(SIM_OK, CAL_OK, SEASON_OK, RES_OK, POP_OK, LAB_OK, BLD_OK, nar)
+	assert_true(_has_error(reg, "campaign_resident maior que residents"))

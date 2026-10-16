@@ -26,6 +26,10 @@ const BUILD_KEYS := {KEY_Z: "cisterna", KEY_X: "silo", KEY_C: "canteiro", KEY_V:
 var _buildings_label := Label.new()
 var _social_label := Label.new()
 var _forecast_label := Label.new()
+var _campaign_label := Label.new()
+## Resumo do fim da campanha (D-047); vazio até o fim.
+var _end_label := Label.new()
+var _end_summary := {}
 ## Teclas das medidas, na ordem de social.json (4 = primeira).
 const MEASURE_KEYS := [KEY_4, KEY_5, KEY_6, KEY_7, KEY_8, KEY_9]
 var _help_label := Label.new()
@@ -52,7 +56,8 @@ func _ready() -> void:
 	_date_label.add_theme_font_size_override("font_size", 32)
 	_season_label.add_theme_font_size_override("font_size", 22)
 	_help_label.modulate = Color(1, 1, 1, 0.6)
-	for l in [_date_label, _season_label, _intensity_label, _forecast_label]:
+	_campaign_label.add_theme_font_size_override("font_size", 20)
+	for l in [_date_label, _campaign_label, _season_label, _intensity_label, _forecast_label]:
 		box.add_child(l)
 	for id in DataRegistry.RESOURCE_IDS:
 		var l := Label.new()
@@ -82,6 +87,10 @@ func _ready() -> void:
 	_buttons.add_child(_locale_button)
 
 	box.add_child(_help_label)
+	_end_label.add_theme_font_size_override("font_size", 22)
+	_end_label.modulate = Color("ffe08a")
+	_end_label.visible = false
+	box.add_child(_end_label)
 	box.add_child(_log_label)
 
 	if Game.ready_ok:
@@ -163,6 +172,9 @@ const LOGGED := ["season_changed", "year_changed", "death", "family_left", "colo
 func _on_day_passed(snapshot: Dictionary, events: Array[Dictionary]) -> void:
 	_pending.clear()  # já aplicados no início do tick
 	_pending_builds.clear()
+	for e in events:
+		if e.type == "campaign_ended":
+			_end_summary = e.summary
 	_refresh(snapshot)
 	for e in log_order(events):
 		if e.type in LOGGED:
@@ -224,10 +236,50 @@ func _refresh(s: Dictionary) -> void:
 	_buildings_label.text = _buildings_text(s)
 	_social_label.text = social_text(s)
 	_forecast_label.text = forecast_text(s.forecast)
+	_campaign_label.text = campaign_text(s.campaign)
+	_end_label.visible = not _end_summary.is_empty()
+	_end_label.text = end_text(_end_summary)
 	var mods: PackedStringArray = []
 	for m in s.modifiers:
 		mods.append("%s %s" % [m.key, ("×%.2f" % m.mul) if m.mul != 1.0 else signed(m.add)])
 	_modifiers_label.text = tr("HUD_MODIFIERS") + " " + " · ".join(mods)
+
+
+## "Ano X de N"; no último ano, quantos dias faltam para a caravana e se medidas fecharam.
+func campaign_text(c: Dictionary) -> String:
+	var out := tr("HUD_CAMPAIGN_YEAR").format({"year": c.year, "years": c.years})
+	if c.ended:
+		return out
+	if c.final_year:
+		out += " · " + (tr("HUD_CAMPAIGN_LAST_DAY") if c.days_left <= 1
+			else tr("HUD_CAMPAIGN_DAYS_LEFT").format({"days": c.days_left}))
+	if c.measures_locked:
+		out += " · " + tr("HUD_CAMPAIGN_LOCKED")
+	return out
+
+
+## Tela de fim (protótipo): desfecho e números que a simulação já tem.
+func end_text(e: Dictionary) -> String:
+	if e.is_empty():
+		return ""
+	var used: PackedStringArray = []
+	for id in e.measures:
+		used.append("%s ×%d" % [tr("MEASURE_" + String(id).to_upper()), e.measures[id]])
+	var by_year: PackedStringArray = []
+	for p in e.pop_by_year:
+		by_year.append(str(p))
+	var lines: PackedStringArray = [
+		tr("HUD_END_TITLE") + " — " + tr("OUTCOME_" + String(e.outcome).to_upper()),
+		tr("HUD_END_SURVIVORS").format({"population": e.population, "initial": e.initial}),
+		tr("HUD_END_DEATHS").format({"deaths": e.deaths}) + " · "
+			+ tr("HUD_END_LEFT").format({"left": e.left}),
+		tr("HUD_END_BY_YEAR").format({"list": " / ".join(by_year)}),
+	]
+	if e.worst_year > 0:
+		lines.append(tr("HUD_END_WORST").format({"year": e.worst_year, "lost": e.worst_lost}))
+	lines.append(tr("HUD_END_BUILT").format({"built": e.built}) + " · " + tr("HUD_END_MEASURES").format(
+		{"measures": ", ".join(used) if not used.is_empty() else tr("HUD_END_NO_MEASURES")}))
+	return "\n".join(lines)
 
 
 ## Linha de trabalho. Com pedido acima dos trabalhadores, cada tarefa mostra

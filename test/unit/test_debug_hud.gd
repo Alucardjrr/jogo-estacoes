@@ -120,3 +120,27 @@ func test_simulacao_publica_posicao_na_fila() -> void:
 	var q := sim.drain_events().filter(func(e: Dictionary) -> bool: return e.type == "build_queued")
 	assert_eq(q.map(func(e: Dictionary) -> int: return e.position), [1, 2])
 	assert_eq(q[0].max, int(sim.data.section("buildings").max_queue))
+
+
+func test_campanha_na_tela() -> void:
+	var c := {"years": 6, "year": 6, "days_left": 40, "final_year": true, "measures_locked": false,
+		"ended": false, "outcome": ""}
+	var text: String = hud.campaign_text(c)
+	assert_true(text.contains(tr("HUD_CAMPAIGN_YEAR").format({"year": 6, "years": 6})), text)
+	assert_true(text.contains(tr("HUD_CAMPAIGN_DAYS_LEFT").format({"days": 40})), text)
+	c.days_left = 1
+	c.measures_locked = true
+	text = hud.campaign_text(c)
+	assert_true(text.contains(tr("HUD_CAMPAIGN_LAST_DAY")), text)
+	assert_true(text.contains(tr("HUD_CAMPAIGN_LOCKED")), text)
+
+
+func test_resumo_do_fim() -> void:
+	assert_eq(hud.end_text({}), "")
+	var text: String = hud.end_text({"outcome": "de_pe", "population": 33, "initial": 50,
+		"deaths": 4, "left": 3, "built": 2, "pop_by_year": [45, 40, 33], "worst_year": 1,
+		"worst_lost": 5, "measures": {"racionamento": 2}})
+	for part in [tr("OUTCOME_DE_PE"), tr("HUD_END_SURVIVORS").format({"population": 33, "initial": 50}),
+			"45 / 40 / 33", tr("HUD_END_WORST").format({"year": 1, "lost": 5}),
+			tr("MEASURE_RACIONAMENTO") + " ×2"]:
+		assert_true(text.contains(part), "%s em %s" % [part, text])

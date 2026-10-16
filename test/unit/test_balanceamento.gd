@@ -75,3 +75,19 @@ func test_adaptativo_vence_o_rigido() -> void:
 	var wins := range(SEEDS).filter(func(i: int) -> bool: return ad.pops[i] >= _plan.pops[i]).size()
 	assert_eq(wins, SEEDS, "adaptativo ≥ rígido em todas as sementes: %s × %s" % [ad.pops, _plan.pops])
 	assert_gt(ad.mean, _plan.mean + 3.0, "adaptativo %.1f × rígido %.1f" % [ad.mean, _plan.mean])
+
+
+func test_campanha_separa_as_estrategias() -> void:
+	# D-047: no fim da campanha, o adaptativo fica ≥ "de pé" em todas as sementes,
+	# a melhor fixa nunca chega a "terra boa" e a linha de base nunca chega a "de pé".
+	var sim := Simulation.new()
+	sim.setup(1)
+	var c := sim.campaign
+	var years: int = c.years
+	var ad := Run.summary({"policy": preload("res://tools/balance/adaptive_policy.gd").new()}, SEEDS, years)
+	var fixed := Run.summary(BEST_FIXED, SEEDS, years)
+	var base := Run.summary({}, SEEDS, years)
+	for i in SEEDS:
+		assert_true(c.outcome_for(ad.pops[i]) in ["de_pe", "terra_boa"], "adaptativo semente %d: %d" % [i + 1, ad.pops[i]])
+		assert_ne(c.outcome_for(fixed.pops[i]), "terra_boa", "fixa semente %d: %d" % [i + 1, fixed.pops[i]])
+		assert_true(c.outcome_for(base.pops[i]) in ["cai", "resistiu"], "base semente %d: %d" % [i + 1, base.pops[i]])

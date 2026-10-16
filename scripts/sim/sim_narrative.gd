@@ -38,6 +38,10 @@ func step(day: int, year: int, population: int, events: Array[Dictionary]) -> Ar
 				if group != "" and priority > 4:
 					priority = 4
 					speech = {"line": "SEASON_" + group}
+			"campaign_final_year":
+				# aviso do último ano (D-047): sempre o mesmo morador, acima de tudo
+				priority = -1
+				speech = {"line": "CAMPAIGN_FINAL_YEAR", "resident": int(_cfg.campaign_resident)}
 			"death":
 				_deaths += 1
 				if priority > 0:
@@ -68,8 +72,9 @@ func step(day: int, year: int, population: int, events: Array[Dictionary]) -> Ar
 	if not speech.is_empty():
 		var n: int = _cfg.reaction_lines.get(speech.line, 0)
 		if n > 0:
+			var who: int = speech.get("resident", _pick(day, 13, int(_cfg.residents)) + 1)
 			var ev := {"type": "speech", "key": "REACT_%s_%d" % [speech.line, _pick(day, 7, n) + 1],
-				"resident": "RESIDENT_%02d" % (_pick(day, 13, int(_cfg.residents)) + 1)}
+				"resident": "RESIDENT_%02d" % who}
 			if speech.has("building"):
 				ev.building = speech.building
 			out.append(ev)

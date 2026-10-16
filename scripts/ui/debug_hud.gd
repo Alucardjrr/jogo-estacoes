@@ -12,6 +12,12 @@ var _status_label := Label.new()
 var _intensity_label := Label.new()
 var _resource_labels := {}  # id do recurso -> Label
 var _modifiers_label := Label.new()
+var _labor_label := Label.new()
+## Ajustes de mão de obra já enviados e ainda não aplicados (aplicam no próximo dia).
+var _pending := {}
+var _last_snapshot := {}
+const LABOR_KEYS := {KEY_Q: ["water", 1], KEY_A: ["water", -1], KEY_W: ["farm", 1],
+	KEY_S: ["farm", -1], KEY_E: ["care", 1], KEY_D: ["care", -1]}
 var _help_label := Label.new()
 var _log_label := Label.new()
 var _pause_button := Button.new()
@@ -43,6 +49,8 @@ func _ready() -> void:
 		l.add_theme_font_size_override("font_size", 20)
 		_resource_labels[id] = l
 		box.add_child(l)
+	_labor_label.add_theme_font_size_override("font_size", 20)
+	box.add_child(_labor_label)
 	_modifiers_label.modulate = Color(1, 1, 1, 0.6)
 	_modifiers_label.visible = Game.dev_mode  # detalhe interno: só em dev (D-029)
 	box.add_child(_modifiers_label)
@@ -89,6 +97,27 @@ func _unhandled_input(event: InputEvent) -> void:
 				Game.set_paused(true)
 		KEY_1, KEY_2, KEY_3:
 			Game.set_speed_index(event.keycode - KEY_1)
+		_:
+			if LABOR_KEYS.has(event.keycode):
+				_adjust_labor(LABOR_KEYS[event.keycode][0], LABOR_KEYS[event.keycode][1])
+
+
+func _adjust_labor(task: String, delta: int) -> void:
+	if _last_snapshot.is_empty():
+		return
+	var lab: Dictionary = _last_snapshot.labor
+	var current: int = lab.desired[task] + _pending.get(task, 0)
+	if current + delta < 0:
+		return
+	if delta > 0:
+		var total := 0
+		for id in DataRegistry.TASK_IDS:
+			total += lab.desired[id] + _pending.get(id, 0)
+		if total >= lab.workers:
+			return  # sem trabalhadores livres
+	_pending[task] = _pending.get(task, 0) + delta
+	Game.adjust_labor(task, delta)
+	_refresh(_last_snapshot)
 
 
 func _refresh_all() -> void:
@@ -107,6 +136,7 @@ func _refresh_all() -> void:
 
 
 func _on_day_passed(snapshot: Dictionary, events: Array[Dictionary]) -> void:
+	_pending.clear()  # já aplicados no início do tick
 	_refresh(snapshot)
 	for e in events:
 		if e.type in ["season_changed", "year_changed", "death", "family_left", "colony_empty"]:
@@ -122,6 +152,7 @@ func _on_speed_changed() -> void:
 
 
 func _refresh(s: Dictionary) -> void:
+	_last_snapshot = s
 	_date_label.text = tr("HUD_DATE").format(
 		{"day": s.day, "month": tr("MONTH_%d" % s.month), "year": s.year})
 	_season_label.text = tr("HUD_SEASON").format(
@@ -137,6 +168,11 @@ func _refresh(s: Dictionary) -> void:
 			"name": tr("RESOURCE_" + id.to_upper()),
 			"stock": roundi(r.stock), "capacity": roundi(r.capacity),
 			"inflow": _num(r.inflow), "consumed": _num(r.consumed), "lost": _num(r.lost)})
+		var net: float = r.inflow - r.demand - r.lost
+		if net < 0.0:
+			label.text += "  " + tr("HUD_DAYS_LEFT").format({"days": days_left(r.stock, net)})
+		else:
+			label.text += "  " + tr("HUD_STABLE")
 		if r.overflow > 0.0:
 			label.text += "  " + tr("HUD_OVERFLOW").format({"amount": _num(r.overflow)})
 		if r.deficit > 0.0:
@@ -146,10 +182,27 @@ func _refresh(s: Dictionary) -> void:
 			label.modulate = Color("ffb36b")
 		else:
 			label.modulate = Color.WHITE
+	var lab: Dictionary = s.labor
+	var shown := {}
+	for id in DataRegistry.TASK_IDS:
+		shown[id] = lab.desired[id] + _pending.get(id, 0)
+	_labor_label.text = tr("HUD_LABOR").format({"water": shown.water, "farm": shown.farm,
+		"care": shown.care, "idle": roundi(lab.idle), "workers": lab.workers,
+		"productivity": roundi(lab.productivity * 100.0)})
+	if not lab.changed and _pending.is_empty():
+		_labor_label.text += "  " + tr("HUD_LABOR_INITIAL")
 	var mods: PackedStringArray = []
 	for m in s.modifiers:
 		mods.append("%s %s" % [m.key, ("×%.2f" % m.mul) if m.mul != 1.0 else "+" + _num(m.add)])
 	_modifiers_label.text = tr("HUD_MODIFIERS") + " " + " · ".join(mods)
+
+
+## Dias até o estoque acabar com o saldo diário `net` (< 0). Arredonda para cima:
+## 0,4 dia de estoque ainda é "1 dia"; estoque zerado é 0.
+static func days_left(stock: float, net: float) -> int:
+	if stock <= 0.0:
+		return 0
+	return ceili(stock / -net)
 
 
 ## Número curto para a tela: inteiro se >= 10, 1 casa se >= 0,1, senão 4 casas (taxas).

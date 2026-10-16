@@ -58,6 +58,12 @@ func _process(delta: float) -> void:
 		day_passed.emit(sim.snapshot(), sim.drain_events())
 
 
+## Ajuste de mão de obra pela fila de comandos (vale no próximo dia simulado).
+func adjust_labor(task: String, delta: int) -> void:
+	if ready_ok:
+		sim.enqueue({"type": "adjust_labor", "task": task, "delta": delta})
+
+
 func speeds() -> Array:
 	return sim.data.section("sim").get("speeds", [1])
 

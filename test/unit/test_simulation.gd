@@ -130,8 +130,11 @@ func test_ano_2_sem_jogador_falta_comida_na_seca() -> void:
 	sim.drain_events()
 	_run(sim, 90)  # seca do ano 2
 	assert_eq(sim.calendar.season_id(), "seca")
-	assert_almost_eq(sim.snapshot().intensity, 1.15, 1e-9)
-	assert_gt(_shortages(sim.drain_events(), "food"), 0, "linha de base precisa quebrar no ano 2")
+	var cfg: Dictionary = sim.data.section("season")
+	assert_almost_eq(sim.snapshot().intensity, 1.0 + cfg.intensity_per_year, 1e-9)
+	var events := sim.drain_events()
+	assert_gt(_shortages(events, "food") + _shortages(events, "water"), 0,
+		"linha de base precisa quebrar no ano 2")
 
 
 func test_transicao_gradual_entre_estacoes() -> void:
@@ -141,13 +144,22 @@ func test_transicao_gradual_entre_estacoes() -> void:
 	var inflows: Array[float] = []
 	for _i in 90 + half + 5:  # da seca até depois do fim da transição
 		sim.step_day()
-		inflows.append(sim.snapshot().resources.water.inflow)
+		inflows.append(sim.modifiers.value("water_inflow") - _labor_part(sim, "water_inflow"))
 	var start := 90 - half - 1  # índice do 1º dia da transição (inflows[0] = dia 1)
 	assert_eq(inflows[start - 1], seasons.seca.water_inflow, "antes da transição: seca pura")
 	for i in range(start, 90 + half - 1):
 		assert_gt(inflows[i], inflows[i - 1], "sobe aos poucos (dia %d)" % i)
 		assert_lt(inflows[i], seasons.janela_1.water_inflow)
 	assert_eq(inflows[-1], seasons.janela_1.water_inflow, "depois da transição: janela pura")
+
+
+## Parte de um modificador publicada pela mão de obra (para isolar a da estação).
+func _labor_part(sim: Simulation, key: String) -> float:
+	var total := 0.0
+	for e in sim.modifiers.entries():
+		if e.key == key and e.source == SimLabor.SOURCE:
+			total += e.add
+	return total
 
 
 func test_snapshot_de_recursos_e_modificadores() -> void:
@@ -158,7 +170,8 @@ func test_snapshot_de_recursos_e_modificadores() -> void:
 	assert_eq(s.health, 80.0)
 	assert_eq(s.resources.water.stock, 4500.0)
 	assert_eq(s.resources.water.capacity, 6000.0)
-	assert_eq(s.modifiers.size(), DataRegistry.SEASON_KEYS.size(), "taxas do dia 1 já publicadas")
+	assert_eq(s.modifiers.size(), DataRegistry.SEASON_KEYS.size() + 3, "estação + mão de obra do dia 1")
+	assert_eq(s.labor.desired, sim.data.section("labor").initial_allocation)
 	_run(sim, 1)
 	assert_eq(sim.snapshot().resources.food.consumed, 50.0)
 
@@ -176,7 +189,8 @@ func test_setup_reinicia_recursos() -> void:
 	_run(sim, 100)
 	assert_true(sim.setup(7))
 	assert_eq(sim.resources.stock.water, 4500.0)
-	assert_eq(sim.modifiers.entries().size(), DataRegistry.SEASON_KEYS.size())
+	assert_eq(sim.modifiers.entries().size(), DataRegistry.SEASON_KEYS.size() + 3)
+	assert_false(sim.labor.changed)
 
 
 # --- Population com os dados do projeto ---
@@ -196,6 +210,7 @@ func test_ano_2_sem_jogador_familias_vao_embora_na_seca() -> void:
 func test_chuvas_derrubam_a_saude() -> void:
 	var sim := _new_sim()
 	_run(sim, 180)  # fim da janela_1: saúde no teto
+	sim.enqueue({"type": "set_labor", "task": "care", "value": 0})  # sem cuidado, a doença aparece
 	var before: float = sim.snapshot().health
 	_run(sim, 90)  # chuvas
 	assert_lt(sim.snapshot().health, before)

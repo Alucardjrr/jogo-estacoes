@@ -6,7 +6,7 @@
       "per_capita_daily": 1.0
     },
     "food": {
-      "initial": 3000,
+      "initial": 4000,
       "capacity": 6000,
       "per_capita_daily": 1.0
     }

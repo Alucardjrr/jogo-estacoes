@@ -24,3 +24,6 @@ Thumbs.db
 *.tmp
 .vscode/
 .idea/
+
+# Logs das checagens (tools/run_checks.sh)
+.check-logs/

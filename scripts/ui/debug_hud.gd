@@ -15,6 +15,8 @@ var _modifiers_label := Label.new()
 var _labor_label := Label.new()
 ## Ajustes de mão de obra já enviados e ainda não aplicados (aplicam no próximo dia).
 var _pending := {}
+## Obras pedidas por tecla e ainda não processadas pelo próximo dia.
+var _pending_builds: Array[String] = []
 var _last_snapshot := {}
 const LABOR_KEYS := {KEY_Q: ["water", 1], KEY_A: ["water", -1], KEY_W: ["farm", 1],
 	KEY_S: ["farm", -1], KEY_E: ["care", 1], KEY_D: ["care", -1], KEY_R: ["build", 1],
@@ -107,7 +109,10 @@ func _unhandled_input(event: InputEvent) -> void:
 			if LABOR_KEYS.has(event.keycode):
 				_adjust_labor(LABOR_KEYS[event.keycode][0], LABOR_KEYS[event.keycode][1])
 			elif BUILD_KEYS.has(event.keycode):
+				_pending_builds.append(BUILD_KEYS[event.keycode])
 				Game.build(BUILD_KEYS[event.keycode])
+				if not _last_snapshot.is_empty():
+					_refresh(_last_snapshot)
 
 
 func _adjust_labor(task: String, delta: int) -> void:
@@ -117,12 +122,8 @@ func _adjust_labor(task: String, delta: int) -> void:
 	var current: int = lab.desired[task] + _pending.get(task, 0)
 	if current + delta < 0:
 		return
-	if delta > 0:
-		var total := 0
-		for id in DataRegistry.TASK_IDS:
-			total += lab.desired[id] + _pending.get(id, 0)
-		if total >= lab.workers:
-			return  # sem trabalhadores livres
+	# Sem trava: se o pedido passar dos trabalhadores, a simulação reduz todos na
+	# mesma proporção e a tela mostra isso (antes a tecla travava sem explicar).
 	_pending[task] = _pending.get(task, 0) + delta
 	Game.adjust_labor(task, delta)
 	_refresh(_last_snapshot)
@@ -143,16 +144,32 @@ func _refresh_all() -> void:
 	_render_log()
 
 
+const LOGGED := ["season_changed", "year_changed", "death", "family_left", "colony_empty",
+	"diary", "speech", "build_queued", "building_completed", "command_rejected"]
+
+
 func _on_day_passed(snapshot: Dictionary, events: Array[Dictionary]) -> void:
 	_pending.clear()  # já aplicados no início do tick
+	_pending_builds.clear()
 	_refresh(snapshot)
-	for e in events:
-		if e.type in ["season_changed", "year_changed", "death", "family_left", "colony_empty",
-				"diary", "speech"]:
+	for e in log_order(events):
+		if e.type in LOGGED:
 			_log_events.append(e)
 	while _log_events.size() > LOG_LINES:
 		_log_events.remove_at(0)
 	_render_log()
+
+
+## Ordem do log de um dia: o diário da estação que acabou vem antes de "Começou: …".
+static func log_order(events: Array[Dictionary]) -> Array[Dictionary]:
+	var out: Array[Dictionary] = []
+	for e in events:
+		if e.type == "diary":
+			out.append(e)
+	for e in events:
+		if e.type != "diary":
+			out.append(e)
+	return out
 
 
 func _on_speed_changed() -> void:
@@ -191,21 +208,37 @@ func _refresh(s: Dictionary) -> void:
 			label.modulate = Color("ffb36b")
 		else:
 			label.modulate = Color.WHITE
-	var lab: Dictionary = s.labor
-	var shown := {}
-	for id in DataRegistry.TASK_IDS:
-		shown[id] = lab.desired[id] + _pending.get(id, 0)
-	_labor_label.text = tr("HUD_LABOR").format({"water": shown.water, "farm": shown.farm,
-		"care": shown.care, "build": shown.build, "salvage": shown.salvage,
-		"idle": roundi(lab.idle), "workers": lab.workers,
-		"productivity": roundi(lab.productivity * 100.0)})
-	if not lab.changed and _pending.is_empty():
-		_labor_label.text += "  " + tr("HUD_LABOR_INITIAL")
+	_labor_label.text = labor_text(s.labor, _pending)
 	_buildings_label.text = _buildings_text(s)
 	var mods: PackedStringArray = []
 	for m in s.modifiers:
-		mods.append("%s %s" % [m.key, ("×%.2f" % m.mul) if m.mul != 1.0 else "+" + _num(m.add)])
+		mods.append("%s %s" % [m.key, ("×%.2f" % m.mul) if m.mul != 1.0 else signed(m.add)])
 	_modifiers_label.text = tr("HUD_MODIFIERS") + " " + " · ".join(mods)
+
+
+## Linha de trabalho. Com pedido acima dos trabalhadores, cada tarefa mostra
+## "pedido→real" e um aviso; a conta do "real" é a mesma da simulação.
+func labor_text(lab: Dictionary, pending: Dictionary) -> String:
+	var shown := {}
+	var total := 0
+	for id in DataRegistry.TASK_IDS:
+		shown[id] = lab.desired[id] + pending.get(id, 0)
+		total += shown[id]
+	var workers: int = lab.workers
+	var over := total > workers
+	var scale := float(workers) / total if over else 1.0
+	var parts := {}
+	for id in DataRegistry.TASK_IDS:
+		parts[id] = ("%d→%d" % [shown[id], roundi(shown[id] * scale)]) if over else str(shown[id])
+	var idle := maxi(workers - total, 0)
+	var text := tr("HUD_LABOR").format({"water": parts.water, "farm": parts.farm,
+		"care": parts.care, "build": parts.build, "salvage": parts.salvage,
+		"idle": idle, "workers": workers, "productivity": roundi(lab.productivity * 100.0)})
+	if over:
+		text += "\n" + tr("HUD_LABOR_OVER").format({"asked": total, "workers": workers})
+	elif not lab.changed and pending.is_empty():
+		text += "  " + tr("HUD_LABOR_INITIAL")
+	return text
 
 
 func _buildings_text(s: Dictionary) -> String:
@@ -235,7 +268,23 @@ func _buildings_text(s: Dictionary) -> String:
 		text += "  " + tr(key).format({"name": tr("BUILDING_" + job.type.to_upper()),
 			"progress": roundi(job.progress), "cost": roundi(job.cost_points),
 			"materials": roundi(job.cost_materials), "queued": b.queue.size()})
+		if not job.started:
+			text += " " + waiting_hint(b, s.labor)
+	if not _pending_builds.is_empty():
+		var names: PackedStringArray = []
+		for id in _pending_builds:
+			names.append(tr("BUILDING_" + id.to_upper()))
+		text += "\n" + tr("HUD_BUILD_REQUESTED").format({"names": ", ".join(names)})
 	return text
+
+
+## Por que a obra parada não anda e o que fazer.
+func waiting_hint(b: Dictionary, lab: Dictionary) -> String:
+	if b.ruins_remaining <= 0.0:
+		return tr("HUD_HINT_RUINS_EMPTY")
+	if lab.desired.salvage + _pending.get("salvage", 0) == 0:
+		return tr("HUD_HINT_SALVAGE")
+	return tr("HUD_HINT_SALVAGING")
 
 
 ## Dias até o estoque acabar com o saldo diário `net` (< 0). Arredonda para cima:
@@ -246,13 +295,22 @@ static func days_left(stock: float, net: float) -> int:
 	return ceili(stock / -net)
 
 
-## Número curto para a tela: inteiro se >= 10, 1 casa se >= 0,1, senão 4 casas (taxas).
-func _num(v: float) -> String:
+## Número curto para a tela: 0 como "0"; inteiro se >= 10; 1 casa se >= 0,1;
+## senão 4 casas (taxas pequenas).
+static func _num(v: float) -> String:
+	if absf(v) < 1e-9:
+		return "0"
 	if absf(v) >= 10.0:
 		return str(roundi(v))
 	if absf(v) >= 0.1:
 		return "%.1f" % v
 	return "%.4f" % v
+
+
+## "+2.0", "-0.5", "0" (sem "+-").
+static func signed(v: float) -> String:
+	var t := _num(v)
+	return t if t == "0" or v < 0.0 else "+" + t
 
 
 func _render_log() -> void:
@@ -272,6 +330,15 @@ func _render_log() -> void:
 				lines.append(tr("EVENT_COLONY_EMPTY"))
 			"diary":
 				lines.append(tr("HUD_DIARY") + " " + tr(e.key).format(e.params))
+			"build_queued":
+				lines.append(tr("EVENT_BUILD_QUEUED").format({
+					"name": tr("BUILDING_" + String(e.building).to_upper()),
+					"position": e.position, "max": e.max}))
+			"building_completed":
+				lines.append(tr("EVENT_BUILDING_COMPLETED").format({
+					"name": tr("BUILDING_" + String(e.building).to_upper())}))
+			"command_rejected":
+				lines.append(tr("EVENT_REJECTED") + " " + tr("REJECT_" + String(e.reason).to_upper()))
 			"speech":
 				var params := {"name": tr(e.resident)}
 				if e.has("building"):

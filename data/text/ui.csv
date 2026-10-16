@@ -118,3 +118,17 @@ DIARY_CHUVAS_BUILT_2,O rio subiu no Ano {year} e voltou ao leito. Obras concluí
 DIARY_CHUVAS_CALM_1,As chuvas do Ano {year} vieram bravas e passaram sem perdas. Somos {population}.,The Year {year} rains came fierce and passed without loss. We are {population}.
 DIARY_CHUVAS_CALM_2,"Atravessamos as chuvas do Ano {year} sem perder ninguém. Chovia sobre a lama, e a gente sorria.","We crossed the Year {year} rains without losing anyone. It rained on the mud, and we smiled."
 REACT_DEATH_1,{name}: Cada um de nós carrega um pouco de quem se foi.,{name}: Each of us carries a little of the one we lost.
+HUD_LABOR_OVER,"Pedido {asked} para {workers} trabalhadores: todas as tarefas reduzidas na mesma proporção (pedido→real)","{asked} assigned for {workers} workers: every task scaled down equally (assigned→actual)"
+HUD_BUILD_REQUESTED,Pedido (entra na fila no próximo dia): {names},Requested (joins the queue next day): {names}
+HUD_HINT_SALVAGE,— ponha gente no Saque (T),— put people on Salvage (T)
+HUD_HINT_SALVAGING,— saque em andamento,— salvaging under way
+HUD_HINT_RUINS_EMPTY,— as ruínas se esgotaram,— the ruins are exhausted
+EVENT_BUILD_QUEUED,"{name} entrou na fila ({position}/{max})","{name} added to the queue ({position}/{max})"
+EVENT_BUILDING_COMPLETED,Obra concluída: {name},Construction finished: {name}
+EVENT_REJECTED,Pedido recusado:,Request refused:
+REJECT_UNKNOWN_TYPE,comando desconhecido,unknown command
+REJECT_INVALID_TASK,tarefa inválida,invalid task
+REJECT_NOT_INTEGER,o valor precisa ser inteiro,the value must be a whole number
+REJECT_NEGATIVE,o valor não pode ser negativo,the value cannot be negative
+REJECT_INVALID_BUILDING,prédio inválido,invalid building
+REJECT_QUEUE_FULL,a fila de obras está cheia,the building queue is full

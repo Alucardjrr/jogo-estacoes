@@ -205,7 +205,7 @@ func test_fila_cheia_recusa() -> void:
 	var rejected := sim.drain_events().filter(func(e: Dictionary) -> bool:
 		return e.type == "command_rejected")
 	assert_eq(rejected.size(), 1)
-	assert_eq(rejected[0].reason, "fila de obras cheia")
+	assert_eq(rejected[0].reason, "queue_full")
 
 
 func test_simulacao_com_predios_deterministica() -> void:

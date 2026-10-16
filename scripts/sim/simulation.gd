@@ -147,34 +147,41 @@ func _apply_command(command: Dictionary) -> void:
 		"build":
 			var id: Variant = command.get("building")
 			if not id is String or not buildings.is_buildable(id):
-				_reject(command, "prédio inválido")
+				_reject(command, "invalid_building")
 			elif not buildings.can_enqueue():
-				_reject(command, "fila de obras cheia")
+				_reject(command, "queue_full")
 			else:
 				buildings.enqueue(id)
-				_events.append({"type": "build_queued", "building": id})
+				_events.append({"type": "build_queued", "building": id,
+					"position": buildings.queue.size(), "max": int(data.section("buildings").max_queue)})
 		_:
-			_reject(command, "tipo desconhecido")
+			_reject(command, "unknown_type")
 
 
 func _apply_labor(command: Dictionary) -> void:
 	var task: Variant = command.get("task")
 	if not task is String or not DataRegistry.TASK_IDS.has(task):
-		_reject(command, "tarefa inválida")
+		_reject(command, "invalid_task")
 		return
 	var key := "value" if command.type == "set_labor" else "delta"
 	var raw: Variant = command.get(key)
 	# Inteiro de verdade: JSON/replay entregam float; 2.5, texto ou null são recusados.
 	if not (raw is int or (raw is float and raw == floorf(raw) and absf(raw) < 1e6)):
-		_reject(command, "%s precisa ser inteiro" % key)
+		_reject(command, "not_integer")
 		return
 	var n := int(raw)
 	var value: int = n if command.type == "set_labor" else labor.desired[task] + n
 	if value < 0:
-		_reject(command, "valor negativo")
+		_reject(command, "negative")
 		return
 	labor.set_desired(task, value)
 	_events.append({"type": "labor_changed", "task": task, "value": value})
+
+
+## Motivos são códigos (texto de jogador fica no CSV, D-024): a tela traduz
+## REJECT_<MOTIVO>. Lista completa em REJECT_REASONS.
+const REJECT_REASONS: PackedStringArray = ["unknown_type", "invalid_task", "not_integer",
+	"negative", "invalid_building", "queue_full"]
 
 
 func _reject(command: Dictionary, reason: String) -> void:

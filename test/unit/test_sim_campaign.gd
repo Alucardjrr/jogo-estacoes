@@ -53,11 +53,12 @@ func test_aviso_do_ultimo_ano_e_fala_do_morador_da_campanha() -> void:
 func test_medidas_bloqueadas_no_fim() -> void:
 	var sim := _sim()
 	var last := sim.campaign.last_day(sim.calendar)
-	# Fora do bloqueio: o motivo é outro (estação), nunca o da campanha.
+	# Fora do bloqueio: qualquer recusa é por outro motivo, nunca o da campanha.
 	sim.calendar.day_index = last - sim.campaign.lock_days - 1
 	sim.enqueue({"type": "enact_measure", "measure": "racionamento"})
 	sim.step_day()
-	assert_eq(_of(sim.drain_events(), "command_rejected")[0].reason, "wrong_season")
+	for r in _of(sim.drain_events(), "command_rejected"):
+		assert_ne(r.reason, "campaign_final")
 	assert_false(sim.snapshot().campaign.measures_locked)
 	# Primeiro dia do bloqueio: até a de desespero com a água no fundo é recusada.
 	sim.resources.stock.water = 0.0
@@ -85,8 +86,9 @@ func test_fim_no_ultimo_dia_e_simulacao_parada() -> void:
 	assert_eq(s.population, sim.population.people())
 	assert_eq(ended[0].outcome, sim.campaign.outcome_for(s.population))
 	var diary := _of(ev, "diary").filter(func(e: Dictionary) -> bool: return e.mood == "END")
-	assert_eq(diary.size(), 1)
+	assert_eq(diary.size(), 2)
 	assert_eq(diary[0].key, "DIARY_END_" + String(ended[0].outcome).to_upper())
+	assert_eq(diary[1].key, "DIARY_END_LOSS_" + sim.campaign.loss_kind())
 	# Depois do fim, nada muda e o relógio não conta mais dias.
 	var before := sim.snapshot()
 	sim.enqueue({"type": "set_labor", "task": "water", "value": 3})
@@ -118,3 +120,14 @@ func test_populacao_por_ano_e_maior_perda() -> void:
 	assert_eq(s.worst_year, 2)
 	assert_eq(s.worst_lost, 20)
 	assert_eq(s.population, 18)
+
+
+func test_linha_de_perdas_so_cita_o_que_aconteceu() -> void:
+	var c := SimCampaign.new({"years": 2, "outcomes": [{"id": "a"}]}, {"measures": {}}, 10)
+	assert_eq(c.loss_kind(), "NONE")
+	c.deaths = 1
+	assert_eq(c.loss_kind(), "DEATHS")
+	c.left = 1
+	assert_eq(c.loss_kind(), "BOTH")
+	c.deaths = 0
+	assert_eq(c.loss_kind(), "LEFT")

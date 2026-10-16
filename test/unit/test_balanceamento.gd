@@ -77,7 +77,6 @@ func test_adaptativo_vence_o_rigido() -> void:
 	assert_gt(ad.mean, _plan.mean + 3.0, "adaptativo %.1f × rígido %.1f" % [ad.mean, _plan.mean])
 
 
-
 func test_campanha_separa_as_estrategias() -> void:
 	# D-047: no fim da campanha, o adaptativo fica ≥ "de pé" em todas as sementes,
 	# a melhor fixa nunca chega a "terra boa" e a linha de base nunca chega a "de pé".

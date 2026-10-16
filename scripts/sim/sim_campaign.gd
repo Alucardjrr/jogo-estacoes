@@ -8,6 +8,11 @@ extends RefCounted
 ##     depois do fim. `lock_days` = maior duração de efeito "depois" das medidas (dados).
 ##   - Fim: eventos "campaign_ended" + entrada final do diário; a simulação para.
 
+## Marcadores de cada texto do fim (o teste de traduções garante que os textos respeitam;
+## nada de "perdemos 0" — QA PR #11/#19).
+const END_PARAMS := ["population", "initial"]
+const LOSS_PARAMS := {"BOTH": ["deaths", "left"], "DEATHS": ["deaths"], "LEFT": ["left"], "NONE": []}
+
 var years: int
 var lock_days: int
 var initial: int
@@ -46,6 +51,17 @@ func days_left(calendar: SimCalendar) -> int:
 
 func measures_locked(calendar: SimCalendar) -> bool:
 	return days_left(calendar) <= lock_days
+
+
+## Qual linha de perdas cabe (só cita contador que aconteceu).
+func loss_kind() -> String:
+	if deaths > 0 and left > 0:
+		return "BOTH"
+	if deaths > 0:
+		return "DEATHS"
+	if left > 0:
+		return "LEFT"
+	return "NONE"
 
 
 ## Desfecho para uma população final (faixas por fração da inicial).
@@ -94,6 +110,8 @@ func step(calendar: SimCalendar, people: int, events: Array[Dictionary],
 		var params := {"population": people, "initial": initial, "deaths": deaths, "left": left}
 		out.append({"type": "diary", "season": calendar.season_id(), "mood": "END",
 			"key": "DIARY_END_" + outcome.to_upper(), "params": params})
+		out.append({"type": "diary", "season": calendar.season_id(), "mood": "END",
+			"key": "DIARY_END_LOSS_" + loss_kind(), "params": params})
 		out.append({"type": "campaign_ended", "outcome": outcome, "summary": summary(measures_used)})
 	return out
 

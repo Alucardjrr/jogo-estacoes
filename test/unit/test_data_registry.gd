@@ -499,3 +499,10 @@ func test_campanha_faixas_crescentes_e_chaves() -> void:
 		SOC_OK, FC_OK, {"years": 0, "outcomes": []})
 	assert_true(_has_error(reg, "outcomes não pode ser vazio"))
 	assert_true(_has_error(reg, "campaign.json: years"))
+
+
+func test_narrative_morador_da_campanha_existe() -> void:
+	var nar := NAR_OK.duplicate(true)
+	nar.campaign_resident = 13
+	var reg := _load_with(SIM_OK, CAL_OK, SEASON_OK, RES_OK, POP_OK, LAB_OK, BLD_OK, nar)
+	assert_true(_has_error(reg, "campaign_resident maior que residents"))

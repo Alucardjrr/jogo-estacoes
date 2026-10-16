@@ -439,6 +439,8 @@ func _parse_narrative(d: Dictionary, src: String, calendar: Dictionary,
 		"season_group": {},
 		"reaction_lines": {},
 	}
+	if out.campaign_resident > out.residents:
+		errors.append("%s: campaign_resident maior que residents" % src)
 	if d.get("season_group") is Dictionary:
 		var g: Dictionary = d.season_group
 		var ids: Array = []
@@ -514,7 +516,8 @@ func _effects(list: Array, where: String, allowed_keys: PackedStringArray, seaso
 ## Campanha (D-046, D-047): duração e faixas de desfecho por fração da população inicial.
 func _parse_campaign(d: Dictionary, src: String) -> Dictionary:
 	_check_keys(d, ["years", "outcomes"], src)
-	var out := {"years": _int(d, "years", src, 1, 100), "outcomes": []}
+	# ≥ 2: o aviso do último ano sai na virada para ele.
+	var out := {"years": _int(d, "years", src, 2, 100), "outcomes": []}
 	var list := _array(d, "outcomes", src)
 	if list.is_empty() and d.has("outcomes"):
 		errors.append("%s: outcomes não pode ser vazio" % src)

@@ -102,6 +102,20 @@ func test_chaves_dinamicas_dos_dados_existem() -> void:
 	assert_gt(found.size(), 0, "a busca precisa achar os _reject")
 	for m in found:
 		assert_true(Simulation.REJECT_REASONS.has(m.get_string(1)), "motivo fora da lista: " + m.get_string(1))
+	# Campanha (D-047): título e diário de cada desfecho; linhas de perdas; só os marcadores
+	# que o texto pode usar (QA PR #19).
+	var end_checks := {}
+	for o in reg.section("campaign").outcomes:
+		var up := String(o.id).to_upper()
+		assert_true(_rows.has("OUTCOME_" + up), "falta OUTCOME_" + up)
+		end_checks["DIARY_END_" + up] = SimCampaign.END_PARAMS
+	for kind in SimCampaign.LOSS_PARAMS:
+		end_checks["DIARY_END_LOSS_" + kind] = SimCampaign.LOSS_PARAMS[kind]
+	for k in end_checks:
+		assert_true(_rows.has(k), "falta " + k)
+		if _rows.has(k):
+			for ph in _placeholders(_rows[k][0]):
+				assert_true(end_checks[k].has(ph.trim_prefix("{").trim_suffix("}")), "%s usa %s" % [k, ph])
 	for id in reg.section("buildings").types:
 		assert_true(_rows.has("BUILDING_" + id.to_upper()), "falta BUILDING_%s" % id.to_upper())
 

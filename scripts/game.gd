@@ -64,6 +64,12 @@ func adjust_labor(task: String, delta: int) -> void:
 		sim.enqueue({"type": "adjust_labor", "task": task, "delta": delta})
 
 
+## Ativa uma medida social (vale no próximo dia simulado).
+func enact_measure(measure: String) -> void:
+	if ready_ok:
+		sim.enqueue({"type": "enact_measure", "measure": measure})
+
+
 ## Põe um prédio na fila de obras (vale no próximo dia simulado).
 func build(building: String) -> void:
 	if ready_ok:

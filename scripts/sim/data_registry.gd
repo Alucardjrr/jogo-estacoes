@@ -21,6 +21,12 @@ const TASK_IDS: PackedStringArray = ["water", "farm", "care", "build", "salvage"
 const BUILDING_EFFECT_KEYS: PackedStringArray = [
 	"water_capacity", "food_capacity", "water_consumption", "food_consumption",
 	"water_loss_rate", "food_loss_rate", "farm_mult", "gather_mult", "health_drift"]
+## Chaves que medidas sociais podem afetar (D-035..D-038): as dos prédios + as de
+## mão de obra/partida que Social também publica.
+const SOCIAL_EFFECT_KEYS: PackedStringArray = [
+	"water_capacity", "food_capacity", "water_consumption", "food_consumption",
+	"water_loss_rate", "food_loss_rate", "farm_mult", "gather_mult", "health_drift",
+	"productivity_mult", "build_mult", "salvage_mult", "departure_days_mult"]
 
 var errors: PackedStringArray = []
 
@@ -40,6 +46,8 @@ func load_all(dir: String = DEFAULT_DIR) -> bool:
 		"labor": _load_json(dir.path_join("labor.json")),
 		"buildings": _load_json(dir.path_join("buildings.json")),
 		"narrative": _load_json(dir.path_join("narrative.json")),
+		"social": _load_json(dir.path_join("social.json")),
+		"forecast": _load_json(dir.path_join("forecast.json")),
 	}
 	var parsed := {}
 	if loaded.sim is Dictionary:
@@ -59,9 +67,14 @@ func load_all(dir: String = DEFAULT_DIR) -> bool:
 		parsed.population = _parse_population(loaded.population, "population.json")
 	if loaded.labor is Dictionary:
 		parsed.labor = _parse_labor(loaded.labor, "labor.json")
+	if loaded.forecast is Dictionary:
+		parsed.forecast = _parse_forecast(loaded.forecast, "forecast.json")
+	if loaded.social is Dictionary:
+		parsed.social = _parse_social(loaded.social, "social.json",
+			parsed.calendar if calendar_ok else {})
 	if loaded.narrative is Dictionary:
 		parsed.narrative = _parse_narrative(loaded.narrative, "narrative.json",
-			parsed.calendar if calendar_ok else {})
+			parsed.calendar if calendar_ok else {}, parsed.get("social", {}))
 	if loaded.buildings is Dictionary:
 		parsed.buildings = _parse_buildings(loaded.buildings, "buildings.json",
 			parsed.calendar if calendar_ok else {})
@@ -76,7 +89,8 @@ func is_loaded() -> bool:
 
 
 ## Dados já normalizados (ints como int) de um sistema: "sim", "calendar",
-## "season", "resources", "population", "labor", "buildings" ou "narrative".
+## "season", "resources", "population", "labor", "buildings", "narrative", "social"
+## ou "forecast".
 func section(name: String) -> Dictionary:
 	return _data.get(name, {})
 
@@ -410,7 +424,8 @@ const REACTION_IDS: PackedStringArray = ["DEATH", "FAMILY_LEFT", "BUILDING_DONE"
 var _group_regex := RegEx.create_from_string("^[A-Z][A-Z0-9_]*$")
 
 
-func _parse_narrative(d: Dictionary, src: String, calendar: Dictionary) -> Dictionary:
+func _parse_narrative(d: Dictionary, src: String, calendar: Dictionary,
+		social: Dictionary = {}) -> Dictionary:
 	_check_keys(d, ["hard_shortage_days", "residents", "season_group", "diary_lines",
 		"reaction_lines"], src)
 	var out := {
@@ -441,11 +456,157 @@ func _parse_narrative(d: Dictionary, src: String, calendar: Dictionary) -> Dicti
 		for grp in out.season_group.values():
 			if not needed.has("SEASON_" + grp):
 				needed.append("SEASON_" + grp)
+		for mid in social.get("measures", {}):
+			needed.append("MEASURE_" + String(mid).to_upper())
 		_check_keys(r, needed, src + ": reaction_lines")
 		for k in r:
 			out.reaction_lines[k] = _int(r, k, src + ": reaction_lines", 1, 99)
 	elif d.has("reaction_lines"):
 		errors.append("%s: reaction_lines precisa ser um objeto {}" % src)
+	return out
+
+
+func _curve(d: Dictionary, key: String, where: String) -> Dictionary:
+	if not d.get(key) is Dictionary:
+		if d.has(key):
+			errors.append("%s: %s precisa ser um objeto {}" % [where, key])
+		return {"full_at": 0.0, "mid_at": 0.0, "mid_mult": 1.0, "zero_mult": 1.0}
+	var c: Dictionary = d[key]
+	var w := "%s: %s" % [where, key]
+	_check_keys(c, ["full_at", "mid_at", "mid_mult", "zero_mult"], w)
+	var out := {"full_at": _float(c, "full_at", w, 0.0, 100.0), "mid_at": _float(c, "mid_at", w, 0.0, 100.0),
+		"mid_mult": _float(c, "mid_mult", w, 0.0, 1.0), "zero_mult": _float(c, "zero_mult", w, 0.0, 1.0)}
+	if c.has("full_at") and c.has("mid_at") and out.mid_at > out.full_at:
+		errors.append("%s: mid_at maior que full_at" % w)
+	return out
+
+
+func _effects(list: Array, where: String, allowed_keys: PackedStringArray, season_ids: Array) -> Array:
+	var out := []
+	for i in list.size():
+		var ew := "%s[%d]" % [where, i]
+		if not list[i] is Dictionary:
+			errors.append("%s: precisa ser um objeto {}" % ew)
+			continue
+		var e: Dictionary = list[i]
+		for k in e.keys():
+			if not k in ["key", "add", "mul"]:  # medidas não filtram por estação no efeito
+				errors.append("%s: chave desconhecida '%s'" % [ew, k])
+		if e.has("add") == e.has("mul"):
+			errors.append("%s: precisa de add ou mul (um dos dois)" % ew)
+		var key: Variant = e.get("key")
+		if not key is String or not allowed_keys.has(key):
+			errors.append("%s: key inválida '%s'" % [ew, str(key)])
+			continue
+		var eff := {"key": key}
+		if e.has("mul"):
+			eff.mul = _float(e, "mul", ew, 0.0, 10.0)
+		else:
+			eff.add = _float(e, "add", ew, -100000.0, 100000.0)
+		out.append(eff)
+	return out
+
+
+func _parse_forecast(d: Dictionary, src: String) -> Dictionary:
+	_check_keys(d, ["variance", "first_varied_year", "k_far", "k_near", "horizon_days", "levels"], src)
+	var out := {
+		"variance": _float(d, "variance", src, 0.0, 0.9),
+		"first_varied_year": _int(d, "first_varied_year", src, 1, 1000),
+		"k_far": _float(d, "k_far", src, 0.0, 2.0),
+		"k_near": _float(d, "k_near", src, 0.0, 2.0),
+		"horizon_days": _int(d, "horizon_days", src, 1, 1000),
+		"levels": [],
+	}
+	if d.has("k_far") and d.has("k_near") and out.k_near > out.k_far:
+		errors.append("%s: k_near maior que k_far (a margem precisa encolher)" % src)
+	var levels := _array(d, "levels", src)
+	if levels.is_empty() and d.has("levels"):
+		errors.append("%s: levels não pode ser vazio" % src)
+	var last := -INF
+	for i in levels.size():
+		var w := "%s: levels[%d]" % [src, i]
+		if not levels[i] is Dictionary:
+			errors.append("%s: precisa ser um objeto {}" % w)
+			continue
+		var l: Dictionary = levels[i]
+		var is_last := i == levels.size() - 1
+		_check_keys(l, ["id"] if is_last else ["id", "below"], w)
+		var entry := {"id": _id(l, "id", w)}
+		if not is_last:
+			entry.below = _float(l, "below", w, 0.0, 100.0)
+			if entry.below <= last:
+				errors.append("%s: below precisa ser crescente" % w)
+			last = entry.below
+		out.levels.append(entry)
+	return out
+
+
+func _parse_social(d: Dictionary, src: String, calendar: Dictionary) -> Dictionary:
+	_check_keys(d, ["trust_initial", "cohesion_initial", "recovery_per_day", "shortage_trust_per_day",
+		"death_cohesion", "left_cohesion", "low_threshold", "trust_productivity",
+		"cohesion_departure", "residual_fraction", "repeat_cost_increase", "one_per_season",
+		"measures"], src)
+	var season_ids: Array = []
+	for cs in calendar.get("seasons", []):
+		season_ids.append(cs.id)
+	var out := {
+		"trust_initial": _float(d, "trust_initial", src, 0.0, 100.0),
+		"cohesion_initial": _float(d, "cohesion_initial", src, 0.0, 100.0),
+		"recovery_per_day": _float(d, "recovery_per_day", src, 0.0, 100.0),
+		"shortage_trust_per_day": _float(d, "shortage_trust_per_day", src, 0.0, 100.0),
+		"death_cohesion": _float(d, "death_cohesion", src, 0.0, 100.0),
+		"left_cohesion": _float(d, "left_cohesion", src, 0.0, 100.0),
+		"low_threshold": _float(d, "low_threshold", src, 0.0, 100.0),
+		"trust_productivity": _curve(d, "trust_productivity", src),
+		"cohesion_departure": _curve(d, "cohesion_departure", src),
+		"residual_fraction": _float(d, "residual_fraction", src, 0.0, 1.0),
+		"repeat_cost_increase": _float(d, "repeat_cost_increase", src, 0.0, 10.0),
+		"one_per_season": _bool(d, "one_per_season", src),
+		"measures": {},
+	}
+	if not d.get("measures") is Dictionary or d.measures.is_empty():
+		if d.has("measures"):
+			errors.append("%s: measures precisa ser um objeto {} com ao menos uma medida" % src)
+		return out
+	for id in d.measures.keys():
+		var where := "%s: measures.%s" % [src, id]
+		if not id is String or _id_regex.search(id) == null:
+			errors.append("%s: id inválido (use minúsculas, dígitos e _)" % where)
+			continue
+		if not d.measures[id] is Dictionary:
+			errors.append("%s: precisa ser um objeto {}" % where)
+			continue
+		var m: Dictionary = d.measures[id]
+		var allowed := ["seasons", "trust_cost", "cohesion_cost", "effects", "full_residual",
+			"exempt_one_per_season", "unlock_water_below", "instant_water_days", "after_days",
+			"after_effects"]
+		for k in m.keys():
+			if not allowed.has(k):
+				errors.append("%s: chave desconhecida '%s'" % [where, k])
+		for k in ["seasons", "trust_cost", "cohesion_cost", "effects"]:
+			if not m.has(k):
+				errors.append("%s: falta a chave '%s'" % [where, k])
+		var entry := {
+			"seasons": [],
+			"trust_cost": _float(m, "trust_cost", where, 0.0, 100.0),
+			"cohesion_cost": _float(m, "cohesion_cost", where, 0.0, 100.0),
+			"full_residual": _bool(m, "full_residual", where),
+			"exempt_one_per_season": _bool(m, "exempt_one_per_season", where),
+			"unlock_water_below": _float(m, "unlock_water_below", where, 0.0, 1.0) if m.has("unlock_water_below") else 0.0,
+			"instant_water_days": _float(m, "instant_water_days", where, 0.0, 1000.0) if m.has("instant_water_days") else 0.0,
+			"after_days": _int(m, "after_days", where, 0, 1000) if m.has("after_days") else 0,
+			"effects": _effects(_array(m, "effects", where), where + ".effects", SOCIAL_EFFECT_KEYS, season_ids),
+			"after_effects": _effects(_array(m, "after_effects", where), where + ".after_effects",
+				SOCIAL_EFFECT_KEYS, season_ids),
+		}
+		for sid in _array(m, "seasons", where):
+			if not sid is String or (not season_ids.is_empty() and not season_ids.has(sid)):
+				errors.append("%s: estação '%s' não existe em calendar.json" % [where, str(sid)])
+			else:
+				entry.seasons.append(sid)
+		if entry.after_days > 0 and entry.after_effects.is_empty():
+			errors.append("%s: after_days sem after_effects" % where)
+		out.measures[id] = entry
 	return out
 
 

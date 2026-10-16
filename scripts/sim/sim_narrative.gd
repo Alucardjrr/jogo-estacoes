@@ -7,7 +7,7 @@ extends RefCounted
 ##     Causa (a mais grave): DEATH > LEFT > SHORT (≥ hard_shortage_days dias de falta)
 ##     > BUILT (obra pronta) > CALM. Cada causa só usa os contadores que aconteceram.
 ##   - "speech": no máximo uma fala por dia, de um morador nomeado, reagindo ao
-##     evento mais importante (morte > partida > obra pronta > início de falta > estação).
+##     evento mais importante (morte > medida/partida > obra pronta > início de falta > estação).
 ## Escolha de linha e de morador é determinística pelo dia (sem usar o RNG da
 ## simulação: texto não pode mudar o balanceamento).
 
@@ -48,6 +48,10 @@ func step(day: int, year: int, population: int, events: Array[Dictionary]) -> Ar
 				if priority > 1:
 					priority = 1
 					speech = {"line": "FAMILY_LEFT"}
+			"measure_enacted":
+				if priority > 1:
+					priority = 1
+					speech = {"line": "MEASURE_" + String(e.measure).to_upper()}
 			"building_completed":
 				_built += 1
 				if priority > 2:

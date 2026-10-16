@@ -63,6 +63,8 @@ func step(people: int, health: float, modifiers: ModifierStack) -> void:
 	var full: float = _cfg.full_productivity_health
 	var lo: float = _cfg.min_productivity
 	productivity = 1.0 if health >= full else lo + (1.0 - lo) * maxf(health, 0.0) / full
+	# Social (confiança, medidas) multiplica; sem Social, 1.
+	productivity *= maxf(modifiers.value("productivity_mult", 1.0), 0.0)
 	var total := total_desired()
 	var scale := minf(1.0, float(workers) / total) if total > 0 else 0.0
 	for id in DataRegistry.TASK_IDS:

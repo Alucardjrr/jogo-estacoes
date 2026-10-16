@@ -86,6 +86,22 @@ func test_chaves_dinamicas_dos_dados_existem() -> void:
 			var k := "REACT_%s_%d" % [line, i + 1]
 			assert_true(_rows.has(k), "falta " + k)
 	assert_true(_rows.has("SETTLEMENT_NAME"))
+	for l in reg.section("forecast").levels:
+		assert_true(_rows.has("FORECAST_LEVEL_" + String(l.id).to_upper()), "falta FORECAST_LEVEL_" + String(l.id).to_upper())
+	for mid in reg.section("social").measures:
+		for suffix in ["", "_DESC"]:
+			var k: String = "MEASURE_" + String(mid).to_upper() + suffix
+			assert_true(_rows.has(k), "falta " + k)
+	for meter in ["TRUST", "COHESION"]:
+		assert_true(_rows.has("METER_" + meter), "falta METER_" + meter)
+	for r in Simulation.REJECT_REASONS:
+		assert_true(_rows.has("REJECT_" + r.to_upper()), "falta REJECT_" + r.to_upper())
+	# Todo motivo emitido pela simulação está em REJECT_REASONS.
+	var sim_code := FileAccess.get_file_as_string("res://scripts/sim/simulation.gd")
+	var found := RegEx.create_from_string("_reject\\(command, \"([a-z_]+)\"\\)").search_all(sim_code)
+	assert_gt(found.size(), 0, "a busca precisa achar os _reject")
+	for m in found:
+		assert_true(Simulation.REJECT_REASONS.has(m.get_string(1)), "motivo fora da lista: " + m.get_string(1))
 	for id in reg.section("buildings").types:
 		assert_true(_rows.has("BUILDING_" + id.to_upper()), "falta BUILDING_%s" % id.to_upper())
 

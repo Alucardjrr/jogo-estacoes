@@ -11,6 +11,9 @@ extends RefCounted
 ##   {"by_season": {"seca": {...}, "janela_1": {...}, ...}}  → aplicada no início de cada estação
 ##   {"by_year": {1: {by_season...}, 2: {...}}}  → plano por estação de cada ano (o último vale para os seguintes)
 ##   + opcional "builds": ["cisterna", "silo", ...] → postos na fila de obras no dia 1
+##   + opcional "measures": {"seca": "racionamento", ...} → medida ativada no início da estação
+##   + opcional "desperation": true → ativa a medida de desespero (confisco) assim que liberar
+##   {"policy": AdaptivePolicy} → decide a mão de obra lendo previsão e estoques (ignora fixed/by_season)
 ## A troca entra pela fila de comandos, como o jogador faria (vale no dia seguinte).
 
 
@@ -23,6 +26,7 @@ static func play(strategy: Dictionary, seed_number: int, years: int,
 	var out := {"deaths": 0, "left": 0, "shortage_days": 0, "health_min": sim.population.health,
 		"population_by_year": [], "rejected": 0}
 	_apply(sim, strategy, sim.calendar.season_id(), 1)
+	_measure(sim, strategy, sim.calendar.season_id())
 	for b in strategy.get("builds", []):
 		sim.enqueue({"type": "build", "building": b})
 	out.built = 0
@@ -31,6 +35,9 @@ static func play(strategy: Dictionary, seed_number: int, years: int,
 	out.building_water_by_season = {}
 	out.water_deficit_by_season = {}
 	for _d in days:
+		if strategy.has("policy"):
+			for c in strategy.policy.decide(sim):
+				sim.enqueue(c)
 		sim.step_day()
 		var short := false
 		for e in sim.drain_events():
@@ -39,10 +46,18 @@ static func play(strategy: Dictionary, seed_number: int, years: int,
 				"family_left": out.left += e.size
 				"shortage": short = true
 				"command_rejected": out.rejected += 1
-				"season_changed": _apply(sim, strategy, e.to, e.year)
+				"season_changed":
+					_apply(sim, strategy, e.to, e.year)
+					_measure(sim, strategy, e.to)
 				"building_completed": out.built += 1
 		if short:
 			out.shortage_days += 1
+		if strategy.get("desperation", false) \
+				and not (strategy.get("desperation_once", false) and out.get("desperation_used", 0) > 0) \
+				and sim.social.check("confisco", sim.calendar.season_id(), sim.calendar.year(),
+					sim.water_fraction()) == "":
+			sim.enqueue({"type": "enact_measure", "measure": "confisco"})
+			out.desperation_used = out.get("desperation_used", 0) + 1
 		var sid := sim.calendar.season_id()
 		out.repair_by_season[sid] = out.repair_by_season.get(sid, 0.0) + sim.buildings.last_repair_points
 		out.wear_by_season[sid] = out.wear_by_season.get(sid, 0.0) + sim.buildings.last_wear_points
@@ -57,6 +72,7 @@ static func play(strategy: Dictionary, seed_number: int, years: int,
 		if sim.calendar.day_index % sim.calendar.days_per_year() == 0:
 			out.population_by_year.append(sim.population.people())
 	out.population = sim.population.people()
+	out.social = sim.social.snapshot()
 	return out
 
 
@@ -84,7 +100,13 @@ static func summary(strategy: Dictionary, seeds: int, years: int,
 	for y in years:
 		by_year[y] /= seeds
 	return {"mean": float(total) / seeds, "worst": pops.min(), "deaths": float(deaths) / seeds,
-		"left": float(left) / seeds, "by_year": by_year}
+		"left": float(left) / seeds, "by_year": by_year, "pops": pops}
+
+
+static func _measure(sim: Simulation, strategy: Dictionary, season_id: String) -> void:
+	var m: Variant = strategy.get("measures", {}).get(season_id)
+	if m is String:
+		sim.enqueue({"type": "enact_measure", "measure": m})
 
 
 static func _apply(sim: Simulation, strategy: Dictionary, season_id: String, year: int) -> void:

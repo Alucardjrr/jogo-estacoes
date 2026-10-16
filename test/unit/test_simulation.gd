@@ -132,7 +132,8 @@ func test_ano_2_sem_jogador_falta_comida_na_seca() -> void:
 	_run(sim, 90)  # seca do ano 2
 	assert_eq(sim.calendar.season_id(), "seca")
 	var cfg: Dictionary = sim.data.section("season")
-	assert_almost_eq(sim.snapshot().intensity, 1.0 + cfg.intensity_per_year, 1e-9)
+	var f: float = sim.forecast.table["2/seca"].f  # variação da estação (D-042)
+	assert_almost_eq(sim.snapshot().intensity, minf(cfg.intensity_max, (1.0 + cfg.intensity_per_year) * f), 1e-9)
 	var events := sim.drain_events()
 	assert_gt(_shortages(events, "food") + _shortages(events, "water"), 0,
 		"linha de base precisa quebrar no ano 2")
@@ -171,7 +172,7 @@ func test_snapshot_de_recursos_e_modificadores() -> void:
 	assert_eq(s.health, 80.0)
 	assert_eq(s.resources.water.stock, 4500.0)
 	assert_eq(s.resources.water.capacity, 6000.0)
-	assert_eq(s.modifiers.size(), DataRegistry.SEASON_KEYS.size() + 3, "estação + mão de obra do dia 1")
+	assert_eq(s.modifiers.size(), DataRegistry.SEASON_KEYS.size() + 5, "estação + 2 curvas sociais + mão de obra do dia 1")
 	assert_eq(s.labor.desired, sim.data.section("labor").initial_allocation)
 	_run(sim, 1)
 	assert_eq(sim.snapshot().resources.food.consumed, 50.0)
@@ -190,7 +191,7 @@ func test_setup_reinicia_recursos() -> void:
 	_run(sim, 100)
 	assert_true(sim.setup(7))
 	assert_eq(sim.resources.stock.water, 4500.0)
-	assert_eq(sim.modifiers.entries().size(), DataRegistry.SEASON_KEYS.size() + 3)
+	assert_eq(sim.modifiers.entries().size(), DataRegistry.SEASON_KEYS.size() + 5)
 	assert_false(sim.labor.changed)
 
 

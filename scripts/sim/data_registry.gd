@@ -47,6 +47,7 @@ func load_all(dir: String = DEFAULT_DIR) -> bool:
 		"buildings": _load_json(dir.path_join("buildings.json")),
 		"narrative": _load_json(dir.path_join("narrative.json")),
 		"social": _load_json(dir.path_join("social.json")),
+		"forecast": _load_json(dir.path_join("forecast.json")),
 	}
 	var parsed := {}
 	if loaded.sim is Dictionary:
@@ -66,6 +67,8 @@ func load_all(dir: String = DEFAULT_DIR) -> bool:
 		parsed.population = _parse_population(loaded.population, "population.json")
 	if loaded.labor is Dictionary:
 		parsed.labor = _parse_labor(loaded.labor, "labor.json")
+	if loaded.forecast is Dictionary:
+		parsed.forecast = _parse_forecast(loaded.forecast, "forecast.json")
 	if loaded.social is Dictionary:
 		parsed.social = _parse_social(loaded.social, "social.json",
 			parsed.calendar if calendar_ok else {})
@@ -86,7 +89,8 @@ func is_loaded() -> bool:
 
 
 ## Dados já normalizados (ints como int) de um sistema: "sim", "calendar",
-## "season", "resources", "population", "labor", "buildings", "narrative" ou "social".
+## "season", "resources", "population", "labor", "buildings", "narrative", "social"
+## ou "forecast".
 func section(name: String) -> Dictionary:
 	return _data.get(name, {})
 
@@ -500,6 +504,40 @@ func _effects(list: Array, where: String, allowed_keys: PackedStringArray, seaso
 		else:
 			eff.add = _float(e, "add", ew, -100000.0, 100000.0)
 		out.append(eff)
+	return out
+
+
+func _parse_forecast(d: Dictionary, src: String) -> Dictionary:
+	_check_keys(d, ["variance", "first_varied_year", "k_far", "k_near", "horizon_days", "levels"], src)
+	var out := {
+		"variance": _float(d, "variance", src, 0.0, 0.9),
+		"first_varied_year": _int(d, "first_varied_year", src, 1, 1000),
+		"k_far": _float(d, "k_far", src, 0.0, 2.0),
+		"k_near": _float(d, "k_near", src, 0.0, 2.0),
+		"horizon_days": _int(d, "horizon_days", src, 1, 1000),
+		"levels": [],
+	}
+	if d.has("k_far") and d.has("k_near") and out.k_near > out.k_far:
+		errors.append("%s: k_near maior que k_far (a margem precisa encolher)" % src)
+	var levels := _array(d, "levels", src)
+	if levels.is_empty() and d.has("levels"):
+		errors.append("%s: levels não pode ser vazio" % src)
+	var last := -INF
+	for i in levels.size():
+		var w := "%s: levels[%d]" % [src, i]
+		if not levels[i] is Dictionary:
+			errors.append("%s: precisa ser um objeto {}" % w)
+			continue
+		var l: Dictionary = levels[i]
+		var is_last := i == levels.size() - 1
+		_check_keys(l, ["id"] if is_last else ["id", "below"], w)
+		var entry := {"id": _id(l, "id", w)}
+		if not is_last:
+			entry.below = _float(l, "below", w, 0.0, 100.0)
+			if entry.below <= last:
+				errors.append("%s: below precisa ser crescente" % w)
+			last = entry.below
+		out.levels.append(entry)
 	return out
 
 

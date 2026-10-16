@@ -102,6 +102,15 @@ frações por dia (0,004 = 0,4% do estoque por dia).
 | `one_per_season` | bool | — | Só uma medida sazonal por estação (D-035) |
 | `measures.<id>` | objeto | ids do GDD 6 | `seasons` (vazio = qualquer), `trust_cost`, `cohesion_cost`, `effects[]` (`{key, add \| mul}` em `DataRegistry.SOCIAL_EFFECT_KEYS`), opcionais `full_residual`, `exempt_one_per_season`, `unlock_water_below` (desespero), `instant_water_days` (água na hora × pessoas), `after_days` + `after_effects[]` (efeito depois que a medida acaba) |
 
+## balance/forecast.json — variação e previsão (D-042)
+| Campo | Tipo | Faixa | O que é |
+|---|---|---|---|
+| `variance` | número | 0–0,9 | Fator f de cada estação severa sorteado em [1−v, 1+v] (RNG único) |
+| `first_varied_year` | inteiro | ≥ 1 | Antes deste ano f = 1 (ano conhecido) |
+| `k_far` / `k_near` | número | k_near ≤ k_far | Margem da previsão = v × intensidade × k, de k_far (longe) a k_near (no dia) |
+| `horizon_days` | inteiro | ≥ 1 | Distância a partir da qual a margem é a máxima |
+| `levels[]` | lista | `below` crescente; último sem `below` | Níveis de severidade (Branda / Dura / Implacável) |
+
 ## Runner de balanceamento
 `godot --headless --path . -s tools/balance_runner.gd -- --seeds=10 --years=3` roda as
 estratégias de referência. Opções no cabeçalho de `tools/balance_runner.gd`

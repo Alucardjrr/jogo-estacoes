@@ -132,7 +132,8 @@ func test_ano_2_sem_jogador_falta_comida_na_seca() -> void:
 	_run(sim, 90)  # seca do ano 2
 	assert_eq(sim.calendar.season_id(), "seca")
 	var cfg: Dictionary = sim.data.section("season")
-	assert_almost_eq(sim.snapshot().intensity, 1.0 + cfg.intensity_per_year, 1e-9)
+	var f: float = sim.forecast.table["2/seca"].f  # variação da estação (D-042)
+	assert_almost_eq(sim.snapshot().intensity, minf(cfg.intensity_max, (1.0 + cfg.intensity_per_year) * f), 1e-9)
 	var events := sim.drain_events()
 	assert_gt(_shortages(events, "food") + _shortages(events, "water"), 0,
 		"linha de base precisa quebrar no ano 2")

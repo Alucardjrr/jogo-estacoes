@@ -20,6 +20,9 @@ var _per_year: float
 var _max: float
 var _seasons: Dictionary
 var _transition: int
+## Fator de variação por estação severa (D-042): "ano/estação" -> f. Preenchido por
+## SimForecast; ausente = 1.
+var factors: Dictionary = {}
 
 
 func _init(cfg: Dictionary) -> void:
@@ -64,7 +67,18 @@ func rate(calendar: SimCalendar, key: String) -> float:
 func _intensity_of(info: Dictionary) -> float:
 	if not info.severe:
 		return 1.0
-	return minf(_max, 1.0 + _per_year * (info.year - 1))
+	var f: float = factors.get("%d/%s" % [info.year, info.id], 1.0)
+	return minf(_max, base_intensity(info.year) * f)  # teto sobre a efetiva (D-025)
+
+
+## Intensidade da fórmula do ano, sem variação nem teto.
+func base_intensity(year: int) -> float:
+	return 1.0 + _per_year * (year - 1)
+
+
+## Intensidade efetiva de uma estação severa de um ano (para a previsão).
+func intensity_for(year: int, season_id: String) -> float:
+	return _intensity_of({"severe": true, "year": year, "id": season_id})
 
 
 func _raw(info: Dictionary, key: String) -> float:

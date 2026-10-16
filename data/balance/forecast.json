@@ -1,0 +1,20 @@
+{
+  "variance": 0.15,
+  "k_far": 1.0,
+  "k_near": 0.25,
+  "horizon_days": 90,
+  "levels": [
+    {
+      "id": "branda",
+      "below": 1.15
+    },
+    {
+      "id": "dura",
+      "below": 1.45
+    },
+    {
+      "id": "implacavel"
+    }
+  ],
+  "first_varied_year": 2
+}

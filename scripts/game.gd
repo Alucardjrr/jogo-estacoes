@@ -58,6 +58,30 @@ func _process(delta: float) -> void:
 		day_passed.emit(sim.snapshot(), sim.drain_events())
 
 
+## Só dev (D-029): simula `days` dias de uma vez (simulação completa, mesma ordem do
+## tick) e entrega tudo à tela num único day_passed. Para testar o fim da campanha
+## sem esperar. Retorna quantos dias passaram.
+func dev_skip(days: int) -> int:
+	if not dev_mode or not ready_ok or days <= 0:
+		return 0
+	var done := 0
+	while done < days and not sim.campaign.ended:
+		sim.step_day()
+		done += 1
+	if done > 0:
+		day_passed.emit(sim.snapshot(), sim.drain_events())
+	return done
+
+
+## Dias até o 1º dia da próxima estação / do próximo ano (para o pulo de dev).
+static func days_to_next_season(day_in_season: int, season_days: int) -> int:
+	return season_days - day_in_season + 1
+
+
+static func days_to_next_year(day_index: int, days_per_year: int) -> int:
+	return days_per_year - day_index % days_per_year
+
+
 ## Ajuste de mão de obra pela fila de comandos (vale no próximo dia simulado).
 func adjust_labor(task: String, delta: int) -> void:
 	if ready_ok:

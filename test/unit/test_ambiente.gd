@@ -59,3 +59,21 @@ func test_log_mostra_diario_e_falas_traduzidos() -> void:
 	assert_false(text.contains("DIARY_") or text.contains("REACT_"), "chave sem tradução: " + text)
 	assert_true(text.contains(tr("RESIDENT_06")))
 	assert_true(text.contains(tr("BUILDING_SILO")))
+
+
+
+func test_pulo_de_dev() -> void:
+	assert_eq(GameScript.days_to_next_season(1, 90), 90)
+	assert_eq(GameScript.days_to_next_season(90, 90), 1)
+	assert_eq(GameScript.days_to_next_year(0, 360), 360)
+	assert_eq(GameScript.days_to_next_year(359, 360), 1)
+	assert_eq(GameScript.days_to_next_year(360, 360), 360)
+
+
+func test_pulo_nao_existe_em_prod() -> void:
+	var dev: bool = Game.dev_mode
+	Game.dev_mode = false
+	var before: int = Game.sim.calendar.day_index
+	assert_eq(Game.dev_skip(360), 0)
+	assert_eq(Game.sim.calendar.day_index, before)
+	Game.dev_mode = dev

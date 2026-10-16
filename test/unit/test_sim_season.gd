@@ -112,3 +112,40 @@ func test_transicao_zero_e_brusca() -> void:
 	var s := _blend(0)
 	assert_eq(s.rate(_at(179), "water_inflow"), 10.0)
 	assert_eq(s.rate(_at(180), "water_inflow"), 50.0)
+
+
+func test_estacoes_de_tamanhos_diferentes_continuas() -> void:
+	# seca 30 dias, janela 330; T = 30 (igual à mais curta): seca nunca fica pura.
+	var cal := {"days_per_month": 30, "months_per_year": 12, "seasons": [
+		{"id": "seca", "months": 1, "severe": true}, {"id": "janela", "months": 11, "severe": false}]}
+	var cfg := CFG.duplicate(true)
+	cfg.transition_days = 30
+	var s := SimSeason.new(cfg)
+	var c := SimCalendar.new(cal)
+	var values: Array[float] = []
+	for d in range(345, 405):  # fim da janela do ano 1 até depois da seca do ano 2
+		c.day_index = d
+		values.append(s.rate(c, "water_inflow"))
+	for v in values:
+		assert_between(v, 10.0 / 1.5 - 1e-9, 50.0 + 1e-9)
+	for i in range(1, 30):
+		assert_lt(values[i], values[i - 1] + 1e-9, "desce até o meio da seca (i=%d)" % i)
+	for i in range(31, 60):
+		assert_gt(values[i], values[i - 1] - 1e-9, "sobe depois do meio (i=%d)" % i)
+
+
+func test_calendario_de_uma_estacao_so() -> void:
+	var cal := {"days_per_month": 30, "months_per_year": 12, "seasons": [
+		{"id": "seca", "months": 12, "severe": true}]}
+	var cfg := CFG.duplicate(true)
+	cfg.seasons = {"seca": CFG.seasons.seca}
+	cfg.transition_days = 20
+	var s := SimSeason.new(cfg)
+	var c := SimCalendar.new(cal)
+	c.day_index = 100
+	assert_eq(s.rate(c, "water_inflow"), 10.0)
+	c.day_index = 359
+	var before := s.rate(c, "water_inflow")
+	c.day_index = 360
+	var after := s.rate(c, "water_inflow")
+	assert_almost_eq(before + after, 10.0 + 10.0 / 1.5, 1e-9, "escalada anual vira rampa")

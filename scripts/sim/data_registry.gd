@@ -146,6 +146,9 @@ func _parse_season(d: Dictionary, src: String, calendar: Dictionary) -> Dictiona
 		"transition_days": _int(d, "transition_days", src, 0, 365),
 		"seasons": {},
 	}
+	# Par: metade exata de cada lado da virada (ímpar perderia 1 dia de mistura).
+	if d.has("transition_days") and out.transition_days % 2 != 0:
+		errors.append("%s: transition_days (%d) precisa ser par" % [src, out.transition_days])
 	# Transição não pode passar da estação mais curta (metade de cada lado).
 	if d.has("transition_days") and not calendar.is_empty():
 		var shortest := 1 << 30

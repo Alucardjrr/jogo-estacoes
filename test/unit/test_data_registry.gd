@@ -275,8 +275,28 @@ func test_resources_nao_aceita_mais_populacao_provisoria() -> void:
 
 func test_transicao_maior_que_a_estacao() -> void:
 	var season := SEASON_OK.duplicate(true)
-	season.transition_days = 181  # estações de CAL_OK têm 180 dias
+	season.transition_days = 182  # estações de CAL_OK têm 180 dias
 	var reg := _load_with(SIM_OK, CAL_OK, season)
-	assert_true(_has_error(reg, "transition_days (181) maior que a estação mais curta (180 dias)"))
+	assert_true(_has_error(reg, "transition_days (182) maior que a estação mais curta (180 dias)"))
+	season.transition_days = 180
+	reg = _load_with(SIM_OK, CAL_OK, season)
+	assert_true(reg.is_loaded(), "igual à estação mais curta é aceito: %s" % [reg.errors])
 	season.transition_days = 2.5
 	assert_true(_has_error(_load_with(SIM_OK, CAL_OK, season), "transition_days: precisa ser inteiro"))
+
+
+func test_transicao_impar_recusada() -> void:
+	var season := SEASON_OK.duplicate(true)
+	season.transition_days = 5
+	assert_true(_has_error(_load_with(SIM_OK, CAL_OK, season), "transition_days (5) precisa ser par"))
+
+
+func test_transicao_limitada_pela_estacao_mais_curta_de_verdade() -> void:
+	var cal := CAL_OK.duplicate(true)
+	cal.seasons[0].months = 10
+	cal.seasons[1].months = 2  # chuvas: 60 dias
+	var season := SEASON_OK.duplicate(true)
+	season.transition_days = 62
+	assert_true(_has_error(_load_with(SIM_OK, cal, season), "maior que a estação mais curta (60 dias)"))
+	season.transition_days = 60
+	assert_true(_load_with(SIM_OK, cal, season).is_loaded())

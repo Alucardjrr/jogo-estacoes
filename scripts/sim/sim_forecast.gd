@@ -52,7 +52,8 @@ func level(intensity: float) -> String:
 
 
 ## Previsão a partir do dia atual. Durante uma severa: estado real dela.
-func forecast(calendar: SimCalendar, season: SimSeason) -> Dictionary:
+## include_real: só para testes/ferramentas — a tela nunca recebe o valor real futuro.
+func forecast(calendar: SimCalendar, season: SimSeason, include_real := false) -> Dictionary:
 	var day := calendar.day_index
 	var cur := calendar.info_at(day)
 	if cur.severe:
@@ -73,10 +74,13 @@ func forecast(calendar: SimCalendar, season: SimSeason) -> Dictionary:
 	var m: float = _cfg.variance * real * k
 	var e: float = table.get("%d/%s" % [info.year, info.id], {"e": 0.0}).e
 	var center := real + e * m / 2.0
-	var lo := center - m
+	var lo := maxf(center - m, 0.0)
 	var hi := center + m
-	return {"now": false, "season": info.id, "days": days_until, "center": center, "low": lo,
-		"high": hi, "level_low": level(lo), "level_high": level(hi), "real": real}
+	var out := {"now": false, "season": info.id, "days": days_until, "center": center, "low": lo,
+		"high": hi, "level_low": level(lo), "level_high": level(hi)}
+	if include_real:
+		out.real = real
+	return out
 
 
 func snapshot() -> Dictionary:

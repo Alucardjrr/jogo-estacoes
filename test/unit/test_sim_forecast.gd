@@ -39,7 +39,7 @@ func test_valor_real_sempre_dentro_da_faixa() -> void:
 	for s in 5:
 		var sim := _sim(s + 1)
 		for _d in 720:
-			var f: Dictionary = sim.forecast.forecast(sim.calendar, sim.season)
+			var f: Dictionary = sim.forecast.forecast(sim.calendar, sim.season, true)
 			if not f.now:
 				assert_true(f.low <= f.real and f.real <= f.high,
 					"semente %d dia %d: %.3f fora de [%.3f, %.3f]" % [s + 1, sim.calendar.day_index, f.real, f.low, f.high])
@@ -85,3 +85,64 @@ func test_previsao_na_tela_traduzida() -> void:
 	sim.calendar.day_index = 100
 	var text: String = hud.forecast_text(sim.forecast.forecast(sim.calendar, sim.season))
 	assert_false(text.contains("{") or text.contains("FORECAST_") or text.contains("HUD_"), text)
+
+
+func test_snapshot_nao_entrega_o_valor_real_futuro() -> void:
+	var sim := _sim()
+	sim.calendar.day_index = 100
+	assert_false(sim.snapshot().forecast.has("real"))
+
+
+func test_ordem_do_rng_no_setup() -> void:
+	# O clima dos anos 1 e 2 é o primeiro uso do RNG: refazendo à mão, mesma tabela.
+	var sim := _sim(42)
+	var rng := RandomNumberGenerator.new()
+	rng.seed = 42
+	var f := SimForecast.new(sim.data.section("forecast"), sim.data.section("calendar"))
+	f.draw_year(1, rng)
+	f.draw_year(2, rng)
+	assert_eq(f.table, sim.forecast.table)
+	assert_eq(rng.state, sim.loop.rng.state, "nada mais usou o RNG no setup")
+
+
+func test_sorteio_da_virada_antes_da_populacao() -> void:
+	# No tick da virada, o ano seguinte é sorteado antes de Population usar o RNG.
+	var sim := _sim(5)
+	sim.calendar.day_index = 359
+	var rng := RandomNumberGenerator.new()
+	rng.seed = sim.loop.rng.seed
+	rng.state = sim.loop.rng.state  # estado no início do tick da virada
+	var f := SimForecast.new(sim.data.section("forecast"), sim.data.section("calendar"))
+	f.draw_year(3, rng)
+	sim.step_day()
+	assert_eq(sim.forecast.table["3/seca"], f.table["3/seca"])
+	assert_eq(sim.forecast.table["3/chuvas"], f.table["3/chuvas"])
+
+
+func test_calendario_sem_severas_e_com_uma_so() -> void:
+	var cal_none := {"days_per_month": 30, "months_per_year": 12, "seasons": [
+		{"id": "janela", "months": 12, "severe": false}]}
+	var cfg: Dictionary = _sim().data.section("forecast")
+	var c := SimCalendar.new(cal_none)
+	var season := SimSeason.new({"intensity_per_year": 0.3, "intensity_max": 2.0, "transition_days": 0,
+		"seasons": {"janela": {"water_inflow": 1.0, "water_loss_rate": 0.0, "food_inflow": 1.0,
+			"food_loss_rate": 0.0, "health_drift": 0.0, "gather_mult": 1.0, "farm_mult": 1.0, "escalation": {}}}})
+	assert_eq(SimForecast.new(cfg, cal_none).forecast(c, season), {})
+	var cal_one := {"days_per_month": 30, "months_per_year": 12, "seasons": [
+		{"id": "seca", "months": 3, "severe": true}, {"id": "janela", "months": 9, "severe": false}]}
+	var c1 := SimCalendar.new(cal_one)
+	c1.day_index = 200
+	var s1 := SimSeason.new({"intensity_per_year": 0.3, "intensity_max": 2.0, "transition_days": 0,
+		"seasons": {"seca": {"water_inflow": 1.0, "water_loss_rate": 0.0, "food_inflow": 1.0,
+			"food_loss_rate": 0.0, "health_drift": 0.0, "gather_mult": 1.0, "farm_mult": 1.0, "escalation": {}},
+			"janela": {"water_inflow": 1.0, "water_loss_rate": 0.0, "food_inflow": 1.0,
+			"food_loss_rate": 0.0, "health_drift": 0.0, "gather_mult": 1.0, "farm_mult": 1.0, "escalation": {}}}})
+	var fc := SimForecast.new(cfg, cal_one)
+	var rng := RandomNumberGenerator.new()
+	fc.draw_year(1, rng)
+	fc.draw_year(2, rng)
+	s1.factors = fc.factors()
+	var out := fc.forecast(c1, s1, true)
+	assert_eq(out.season, "seca")
+	assert_eq(out.days, 160, "seca do ano seguinte")
+	assert_true(out.low <= out.real and out.real <= out.high)

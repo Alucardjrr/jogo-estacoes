@@ -13,6 +13,7 @@ extends RefCounted
 ##   + opcional "builds": ["cisterna", "silo", ...] → postos na fila de obras no dia 1
 ##   + opcional "measures": {"seca": "racionamento", ...} → medida ativada no início da estação
 ##   + opcional "desperation": true → ativa a medida de desespero (confisco) assim que liberar
+##   {"policy": AdaptivePolicy} → decide a mão de obra lendo previsão e estoques (ignora fixed/by_season)
 ## A troca entra pela fila de comandos, como o jogador faria (vale no dia seguinte).
 
 
@@ -34,6 +35,9 @@ static func play(strategy: Dictionary, seed_number: int, years: int,
 	out.building_water_by_season = {}
 	out.water_deficit_by_season = {}
 	for _d in days:
+		if strategy.has("policy"):
+			for c in strategy.policy.decide(sim):
+				sim.enqueue(c)
 		sim.step_day()
 		var short := false
 		for e in sim.drain_events():

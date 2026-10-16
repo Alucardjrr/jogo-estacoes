@@ -7,7 +7,7 @@ extends SceneTree
 ##   --years=3             anos por partida
 ##   --data=res://data/balance   pasta de dados (copie e altere fora do repo para testar números)
 ##   --fixed=9/18/3        uma distribuição fixa água/roça/cuidado
-##   --plan=seca:27/0/3,janela_1:6/15/9,chuvas:0/21/9,janela_2:6/21/3
+##   --plan=seca:27/0/3,janela_1:6/21/3,chuvas:0/21/9,janela_2:6/21/3
 ##   --builds=cisterna,silo   ordem de obras (somada a --fixed/--plan)
 ##   --search              busca exaustiva da melhor distribuição fixa (passo 3)
 ## Distribuição a/r/c aceita 5 números: água/roça/cuidado/obras/saque.
@@ -15,11 +15,13 @@ extends SceneTree
 
 const Run := preload("res://tools/balance/balance_run.gd")
 
+const Adaptive := preload("res://tools/balance/adaptive_policy.gd")
+
 const REFERENCE := {
 	"linha de base (dados)": {},
 	"melhor fixa (6/21/3)": {"fixed": {"water": 6, "farm": 21, "care": 3}},
 	"por estação": {"by_season": {
-		"seca": {"water": 27, "farm": 0, "care": 3}, "janela_1": {"water": 6, "farm": 15, "care": 9},
+		"seca": {"water": 27, "farm": 0, "care": 3}, "janela_1": {"water": 6, "farm": 21, "care": 3},
 		"chuvas": {"water": 0, "farm": 21, "care": 9}, "janela_2": {"water": 6, "farm": 21, "care": 3}}},
 	"plano da seca o ano todo": {"fixed": {"water": 27, "farm": 0, "care": 3}},
 	"plano das chuvas o ano todo": {"fixed": {"water": 0, "farm": 21, "care": 9}},
@@ -69,14 +71,17 @@ func _init() -> void:
 				search = true
 			"builds":
 				builds = Array((kv[1] if kv.size() > 1 else "").split(",", false))
+	var explicit := not strategies.is_empty()
+	if not explicit:
+		strategies = REFERENCE.duplicate(true)
+		strategies["adaptativo (lê previsão e estoques)"] = {"policy": Adaptive.new()}
 	if search:
 		_search(opt)
 		if _failed:
 			return
 	else:
-		if strategies.is_empty():
-			strategies = REFERENCE
-		elif not builds.is_empty():
+		# --builds só vale para --fixed/--plan (as referências têm planos próprios).
+		if explicit and not builds.is_empty():
 			for name in strategies:
 				strategies[name].builds = builds
 		print("sementes=%d anos=%d dados=%s" % [opt.seeds, opt.years, opt.data])

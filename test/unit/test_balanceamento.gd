@@ -9,8 +9,10 @@ const SEEDS := 10
 const YEARS := 3
 
 const BEST_FIXED := {"fixed": {"water": 6, "farm": 21, "care": 3}}
+## Plano rígido de referência. Janela_1 era 6/15/9 antes da variação (D-042); com o clima
+## incerto, estocar comida antes das chuvas (6/21/3) é o melhor rígido (runner, D-044).
 const PLAN := {
-	"seca": {"water": 27, "farm": 0, "care": 3}, "janela_1": {"water": 6, "farm": 15, "care": 9},
+	"seca": {"water": 27, "farm": 0, "care": 3}, "janela_1": {"water": 6, "farm": 21, "care": 3},
 	"chuvas": {"water": 0, "farm": 21, "care": 9}, "janela_2": {"water": 6, "farm": 21, "care": 3}}
 
 var _base: Dictionary
@@ -35,9 +37,8 @@ func test_linha_de_base_quebra_no_ano_2() -> void:
 
 
 func test_por_estacao_vence_fixa_que_vence_linha_de_base() -> void:
-	# PROVISÓRIO (D-043): margem 3 (era 5) — com a variação por estação o plano rígido
-	# perde força. Volta a +5 quando existir o plano adaptativo que lê a previsão (BACKLOG P1).
-	assert_gt(_plan.mean, _fixed.mean + 3.0, "por estação %.1f × fixa %.1f" % [_plan.mean, _fixed.mean])
+	# +5 restaurado (D-044) com o plano de referência revisto; era +3 provisório (D-043).
+	assert_gt(_plan.mean, _fixed.mean + 5.0, "por estação %.1f × fixa %.1f" % [_plan.mean, _fixed.mean])
 	assert_gt(_fixed.mean, _base.mean, "fixa %.1f × base %.1f" % [_fixed.mean, _base.mean])
 
 
@@ -66,3 +67,11 @@ func test_partida_deterministica() -> void:
 func test_dados_invalidos_nao_travam() -> void:
 	var r: Dictionary = Run.play({}, 1, 1, "user://nao_existe")
 	assert_true(r.has("error"))
+
+
+func test_adaptativo_vence_o_rigido() -> void:
+	# Estratégia que lê previsão, estoques e saúde (tools/balance/adaptive_policy.gd).
+	var ad := Run.summary({"policy": preload("res://tools/balance/adaptive_policy.gd").new()}, SEEDS, YEARS)
+	var wins := range(SEEDS).filter(func(i: int) -> bool: return ad.pops[i] >= _plan.pops[i]).size()
+	assert_eq(wins, SEEDS, "adaptativo ≥ rígido em todas as sementes: %s × %s" % [ad.pops, _plan.pops])
+	assert_gt(ad.mean, _plan.mean + 3.0, "adaptativo %.1f × rígido %.1f" % [ad.mean, _plan.mean])

@@ -73,9 +73,11 @@ func forecast(calendar: SimCalendar, season: SimSeason, include_real := false) -
 	var k: float = _cfg.k_near + (_cfg.k_far - _cfg.k_near) * t
 	var m: float = _cfg.variance * real * k
 	var e: float = table.get("%d/%s" % [info.year, info.id], {"e": 0.0}).e
-	var center := real + e * m / 2.0
+	# Teto do D-025 também na tela: a intensidade nunca passa dele (o real já está limitado).
+	var cap := season.max_intensity()
+	var center := minf(real + e * m / 2.0, cap)
 	var lo := maxf(center - m, 0.0)
-	var hi := center + m
+	var hi := minf(center + m, cap)
 	var out := {"now": false, "season": info.id, "days": days_until, "center": center, "low": lo,
 		"high": hi, "level_low": level(lo), "level_high": level(hi)}
 	if include_real:

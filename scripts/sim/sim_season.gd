@@ -9,31 +9,68 @@ extends RefCounted
 ## estações severas; 1 nas brandas. Cada grandeza da estação é multiplicada por
 ## intensidade^expoente (escalation). Expoente negativo = piora reduzindo
 ## (ex.: menos chuva na seca); positivo = piora aumentando.
+##
+## Transição (D-027): janela de transition_days centrada na virada. Dentro dela
+## o valor é a mistura das duas estações com curva smoothstep; cada lado usa a
+## intensidade do próprio ano. O 1º dia do jogo não tem estação anterior.
 
 const SOURCE := "season"
 
 var _per_year: float
 var _max: float
 var _seasons: Dictionary
+var _transition: int
 
 
 func _init(cfg: Dictionary) -> void:
 	_per_year = cfg.intensity_per_year
 	_max = cfg.intensity_max
 	_seasons = cfg.seasons
+	_transition = cfg.transition_days
 
 
+## Intensidade da estação atual (sem mistura; é o que a tela mostra).
 func intensity(calendar: SimCalendar) -> float:
-	if not calendar.season_is_severe():
-		return 1.0
-	return minf(_max, 1.0 + _per_year * (calendar.year() - 1))
+	return _intensity_of(calendar.info_at(calendar.day_index))
 
 
-## Valor efetivo de uma grandeza (ex.: "water_inflow") hoje.
+## Valor efetivo de uma grandeza (ex.: "water_inflow") hoje, já com transição.
 func rate(calendar: SimCalendar, key: String) -> float:
-	var s: Dictionary = _seasons[calendar.season_id()]
+	var day := calendar.day_index
+	var info := calendar.info_at(day)
+	if _transition <= 0:
+		return _raw(info, key)
+	var half := _transition / 2.0
+	var ds: int = info.day_in_season - 1  # 0-based
+	var length: int = info.length
+	var from: Dictionary
+	var to: Dictionary
+	var t: float
+	if ds >= length - half:
+		from = info
+		to = calendar.info_at(day + (length - ds))  # 1º dia da próxima estação
+		t = (ds - (length - half) + 0.5) / _transition
+	elif ds < half and day - ds - 1 >= 0:
+		from = calendar.info_at(day - ds - 1)  # último dia da estação anterior
+		to = info
+		t = (ds + half + 0.5) / _transition
+	else:
+		return _raw(info, key)
+	var a := _raw(from, key)
+	var b := _raw(to, key)
+	return a + (b - a) * smoothstep(0.0, 1.0, t)
+
+
+func _intensity_of(info: Dictionary) -> float:
+	if not info.severe:
+		return 1.0
+	return minf(_max, 1.0 + _per_year * (info.year - 1))
+
+
+func _raw(info: Dictionary, key: String) -> float:
+	var s: Dictionary = _seasons[info.id]
 	var exponent: float = s.escalation.get(key, 0.0)
-	return s[key] * pow(intensity(calendar), exponent)
+	return s[key] * pow(_intensity_of(info), exponent)
 
 
 func publish(calendar: SimCalendar, modifiers: ModifierStack) -> void:

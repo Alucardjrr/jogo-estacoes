@@ -139,12 +139,24 @@ func _parse_calendar(d: Dictionary, src: String) -> Dictionary:
 ## Referência cruzada: as estações de season.json precisam ser exatamente as de
 ## calendar.json (nem faltando, nem sobrando).
 func _parse_season(d: Dictionary, src: String, calendar: Dictionary) -> Dictionary:
-	_check_keys(d, ["intensity_per_year", "intensity_max", "seasons"], src)
+	_check_keys(d, ["intensity_per_year", "intensity_max", "transition_days", "seasons"], src)
 	var out := {
 		"intensity_per_year": _float(d, "intensity_per_year", src, 0.0, 1.0),
 		"intensity_max": _float(d, "intensity_max", src, 1.0, 5.0),
+		"transition_days": _int(d, "transition_days", src, 0, 365),
 		"seasons": {},
 	}
+	# Par: metade exata de cada lado da virada (ímpar perderia 1 dia de mistura).
+	if d.has("transition_days") and out.transition_days % 2 != 0:
+		errors.append("%s: transition_days (%d) precisa ser par" % [src, out.transition_days])
+	# Transição não pode passar da estação mais curta (metade de cada lado).
+	if d.has("transition_days") and not calendar.is_empty():
+		var shortest := 1 << 30
+		for cs in calendar.seasons:
+			shortest = mini(shortest, int(cs.months) * int(calendar.days_per_month))
+		if out.transition_days > shortest:
+			errors.append("%s: transition_days (%d) maior que a estação mais curta (%d dias)" % [
+				src, out.transition_days, shortest])
 	if not d.has("seasons"):
 		return out
 	if not d.seasons is Dictionary:

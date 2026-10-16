@@ -39,6 +39,7 @@ func load_all(dir: String = DEFAULT_DIR) -> bool:
 		"population": _load_json(dir.path_join("population.json")),
 		"labor": _load_json(dir.path_join("labor.json")),
 		"buildings": _load_json(dir.path_join("buildings.json")),
+		"narrative": _load_json(dir.path_join("narrative.json")),
 	}
 	var parsed := {}
 	if loaded.sim is Dictionary:
@@ -58,6 +59,9 @@ func load_all(dir: String = DEFAULT_DIR) -> bool:
 		parsed.population = _parse_population(loaded.population, "population.json")
 	if loaded.labor is Dictionary:
 		parsed.labor = _parse_labor(loaded.labor, "labor.json")
+	if loaded.narrative is Dictionary:
+		parsed.narrative = _parse_narrative(loaded.narrative, "narrative.json",
+			parsed.calendar if calendar_ok else {})
 	if loaded.buildings is Dictionary:
 		parsed.buildings = _parse_buildings(loaded.buildings, "buildings.json",
 			parsed.calendar if calendar_ok else {})
@@ -72,7 +76,7 @@ func is_loaded() -> bool:
 
 
 ## Dados já normalizados (ints como int) de um sistema: "sim", "calendar",
-## "season", "resources", "population", "labor" ou "buildings".
+## "season", "resources", "population", "labor", "buildings" ou "narrative".
 func section(name: String) -> Dictionary:
 	return _data.get(name, {})
 
@@ -396,6 +400,52 @@ func _parse_buildings(d: Dictionary, src: String, calendar: Dictionary) -> Dicti
 					eff.seasons.append(sid)
 			entry.effects.append(eff)
 		out.types[id] = entry
+	return out
+
+
+## Narrative (D-034): quantas linhas de texto existem por chave-base. Os textos em si
+## ficam no CSV; o teste de traduções garante que toda chave derivada daqui existe.
+const REACTION_IDS: PackedStringArray = ["DEATH", "FAMILY_LEFT", "BUILDING_DONE",
+	"SHORTAGE_WATER", "SHORTAGE_FOOD"]
+var _group_regex := RegEx.create_from_string("^[A-Z][A-Z0-9_]*$")
+
+
+func _parse_narrative(d: Dictionary, src: String, calendar: Dictionary) -> Dictionary:
+	_check_keys(d, ["hard_shortage_days", "residents", "season_group", "diary_lines",
+		"reaction_lines"], src)
+	var out := {
+		"hard_shortage_days": _int(d, "hard_shortage_days", src, 0, 1000),
+		"residents": _int(d, "residents", src, 1, 99),
+		"diary_lines": _int(d, "diary_lines", src, 1, 99),
+		"season_group": {},
+		"reaction_lines": {},
+	}
+	if d.get("season_group") is Dictionary:
+		var g: Dictionary = d.season_group
+		var ids: Array = []
+		for cs in calendar.get("seasons", []):
+			ids.append(cs.id)
+		if not ids.is_empty():
+			_check_keys(g, ids, src + ": season_group")
+		for sid in g:
+			if not g[sid] is String or _group_regex.search(g[sid]) == null:
+				errors.append("%s: season_group.%s inválido (use MAIÚSCULAS)" % [src, sid])
+			else:
+				out.season_group[sid] = g[sid]
+	elif d.has("season_group"):
+		errors.append("%s: season_group precisa ser um objeto {}" % src)
+	if d.get("reaction_lines") is Dictionary:
+		var r: Dictionary = d.reaction_lines
+		var needed: Array = []  # cópia nova: não pode crescer a constante entre chamadas
+		needed.append_array(REACTION_IDS)
+		for grp in out.season_group.values():
+			if not needed.has("SEASON_" + grp):
+				needed.append("SEASON_" + grp)
+		_check_keys(r, needed, src + ": reaction_lines")
+		for k in r:
+			out.reaction_lines[k] = _int(r, k, src + ": reaction_lines", 1, 99)
+	elif d.has("reaction_lines"):
+		errors.append("%s: reaction_lines precisa ser um objeto {}" % src)
 	return out
 
 

@@ -147,7 +147,8 @@ func _on_day_passed(snapshot: Dictionary, events: Array[Dictionary]) -> void:
 	_pending.clear()  # já aplicados no início do tick
 	_refresh(snapshot)
 	for e in events:
-		if e.type in ["season_changed", "year_changed", "death", "family_left", "colony_empty"]:
+		if e.type in ["season_changed", "year_changed", "death", "family_left", "colony_empty",
+				"diary", "speech"]:
 			_log_events.append(e)
 	while _log_events.size() > LOG_LINES:
 		_log_events.remove_at(0)
@@ -161,7 +162,7 @@ func _on_speed_changed() -> void:
 
 func _refresh(s: Dictionary) -> void:
 	_last_snapshot = s
-	_date_label.text = tr("HUD_DATE").format(
+	_date_label.text = tr("SETTLEMENT_NAME") + " — " + tr("HUD_DATE").format(
 		{"day": s.day, "month": tr("MONTH_%d" % s.month), "year": s.year})
 	_season_label.text = tr("HUD_SEASON").format(
 		{"season": _season_name(s.season), "day": s.day_in_season, "total": s.season_days})
@@ -269,6 +270,13 @@ func _render_log() -> void:
 				lines.append(tr("EVENT_FAMILY_LEFT").format({"family": e.family, "size": e.size}))
 			"colony_empty":
 				lines.append(tr("EVENT_COLONY_EMPTY"))
+			"diary":
+				lines.append(tr("HUD_DIARY") + " " + tr(e.key).format(e.params))
+			"speech":
+				var params := {"name": tr(e.resident)}
+				if e.has("building"):
+					params.building = tr("BUILDING_" + String(e.building).to_upper())
+				lines.append(tr(e.key).format(params))
 	_log_label.text = "\n".join(lines)
 
 

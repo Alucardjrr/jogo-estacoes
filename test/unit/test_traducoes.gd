@@ -67,6 +67,19 @@ func test_chaves_dinamicas_dos_dados_existem() -> void:
 		assert_true(_rows.has("SEASON_" + season.id.to_upper()), "falta SEASON_%s" % season.id.to_upper())
 	for id in DataRegistry.RESOURCE_IDS:
 		assert_true(_rows.has("RESOURCE_" + id.to_upper()), "falta RESOURCE_%s" % id.to_upper())
+	var nar: Dictionary = reg.section("narrative")
+	for i in nar.residents:
+		assert_true(_rows.has("RESIDENT_%02d" % (i + 1)), "falta RESIDENT_%02d" % (i + 1))
+	for grp in nar.season_group.values():
+		for mood in ["CALM", "HARD"]:
+			for i in nar.diary_lines:
+				var k := "DIARY_%s_%s_%d" % [grp, mood, i + 1]
+				assert_true(_rows.has(k), "falta " + k)
+	for line in nar.reaction_lines:
+		for i in nar.reaction_lines[line]:
+			var k := "REACT_%s_%d" % [line, i + 1]
+			assert_true(_rows.has(k), "falta " + k)
+	assert_true(_rows.has("SETTLEMENT_NAME"))
 	for id in reg.section("buildings").types:
 		assert_true(_rows.has("BUILDING_" + id.to_upper()), "falta BUILDING_%s" % id.to_upper())
 

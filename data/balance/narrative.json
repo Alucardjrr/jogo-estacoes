@@ -1,0 +1,21 @@
+{
+  "hard_shortage_days": 10,
+  "residents": 12,
+  "season_group": {
+    "seca": "SECA",
+    "janela_1": "JANELA",
+    "chuvas": "CHUVAS",
+    "janela_2": "JANELA"
+  },
+  "diary_lines": 3,
+  "reaction_lines": {
+    "DEATH": 4,
+    "FAMILY_LEFT": 4,
+    "BUILDING_DONE": 4,
+    "SHORTAGE_WATER": 3,
+    "SHORTAGE_FOOD": 3,
+    "SEASON_SECA": 2,
+    "SEASON_CHUVAS": 2,
+    "SEASON_JANELA": 2
+  }
+}

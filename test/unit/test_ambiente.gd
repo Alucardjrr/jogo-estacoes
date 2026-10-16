@@ -44,3 +44,18 @@ func test_hud_esconde_modificadores_em_prod() -> void:
 	add_child_autofree(hud_dev)
 	assert_true(hud_dev._modifiers_label.visible)
 	Game.dev_mode = old
+
+
+func test_log_mostra_diario_e_falas_traduzidos() -> void:
+	var hud: Control = preload("res://scenes/debug/debug_hud.tscn").instantiate()
+	add_child_autofree(hud)
+	var events: Array[Dictionary] = [
+		{"type": "diary", "season": "seca", "key": "DIARY_SECA_HARD_1",
+			"params": {"year": 1, "population": 40, "deaths": 2, "left": 1, "built": 0}},
+		{"type": "speech", "key": "REACT_BUILDING_DONE_1", "resident": "RESIDENT_06", "building": "silo"}]
+	hud._on_day_passed(Game.sim.snapshot(), events)
+	var text: String = hud._log_label.text
+	assert_false(text.contains("{"), "marcador sem valor: " + text)
+	assert_false(text.contains("DIARY_") or text.contains("REACT_"), "chave sem tradução: " + text)
+	assert_true(text.contains(tr("RESIDENT_06")))
+	assert_true(text.contains(tr("BUILDING_SILO")))

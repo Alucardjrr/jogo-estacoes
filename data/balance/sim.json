@@ -1,0 +1,6 @@
+{
+  "seconds_per_day": 3.0,
+  "speeds": [1, 2, 3],
+  "max_days_per_frame": 10,
+  "default_seed": 20261015
+}

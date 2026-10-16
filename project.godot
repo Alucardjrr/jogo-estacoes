@@ -11,13 +11,22 @@ config_version=5
 [application]
 
 config/name="jogo-estacoes"
+run/main_scene="res://scenes/debug/debug_hud.tscn"
 config/features=PackedStringArray("4.7")
+
+[autoload]
+
+Game="*res://scripts/game.gd"
+
+[editor_plugins]
+
+enabled=PackedStringArray("res://addons/gut/plugin.cfg")
+
+[internationalization]
+
+locale/translations=PackedStringArray("res://data/text/ui.pt_BR.translation", "res://data/text/ui.en.translation")
 
 [rendering]
 
 renderer/rendering_method="gl_compatibility"
 renderer/rendering_method.mobile="gl_compatibility"
-
-[editor_plugins]
-
-enabled=PackedStringArray("res://addons/gut/plugin.cfg")

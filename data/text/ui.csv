@@ -1,0 +1,26 @@
+keys,pt_BR,en
+MONTH_1,Janeiro,January
+MONTH_2,Fevereiro,February
+MONTH_3,Março,March
+MONTH_4,Abril,April
+MONTH_5,Maio,May
+MONTH_6,Junho,June
+MONTH_7,Julho,July
+MONTH_8,Agosto,August
+MONTH_9,Setembro,September
+MONTH_10,Outubro,October
+MONTH_11,Novembro,November
+MONTH_12,Dezembro,December
+SEASON_SECA,Seca,Drought
+SEASON_CHUVAS,Chuvas,Rains
+SEASON_JANELA_1,Janela,Window
+SEASON_JANELA_2,Janela,Window
+HUD_DATE,"{day} de {month}, Ano {year}","{month} {day}, Year {year}"
+HUD_SEASON,"{season} — dia {day} de {total}","{season} — day {day} of {total}"
+HUD_PAUSED,Pausado,Paused
+HUD_SPEED,Velocidade {speed}×,Speed {speed}×
+HUD_PAUSE_BUTTON,Pausar,Pause
+HUD_HELP,Espaço: pausar · 1/2/3: velocidade,Space: pause · 1/2/3: speed
+HUD_DATA_ERROR,Erro nos dados de balanceamento:,Balance data error:
+EVENT_SEASON_CHANGED,"Começou: {season} (Ano {year})","Started: {season} (Year {year})"
+EVENT_YEAR_CHANGED,Ano {year} começou,Year {year} began

@@ -79,6 +79,9 @@ func _search(opt: Dictionary) -> void:
 		for f in range(0, 31 - w, 3):
 			var alloc := {"water": w, "farm": f, "care": 30 - w - f}
 			var r: Dictionary = Run.summary({"fixed": alloc}, opt.seeds, opt.years, opt.data)
+			if r.has("error"):
+				_fail(r.error)
+				return
 			best.append([r.mean, "%d/%d/%d" % [w, f, 30 - w - f]])
 	best.sort_custom(func(a: Array, b: Array) -> bool: return a[0] > b[0])
 	print("melhores distribuições fixas (pop. média final):")

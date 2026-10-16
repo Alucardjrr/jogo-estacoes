@@ -86,6 +86,8 @@ func test_chaves_dinamicas_dos_dados_existem() -> void:
 			var k := "REACT_%s_%d" % [line, i + 1]
 			assert_true(_rows.has(k), "falta " + k)
 	assert_true(_rows.has("SETTLEMENT_NAME"))
+	for r in Simulation.REJECT_REASONS:
+		assert_true(_rows.has("REJECT_" + r.to_upper()), "falta REJECT_" + r.to_upper())
 	for id in reg.section("buildings").types:
 		assert_true(_rows.has("BUILDING_" + id.to_upper()), "falta BUILDING_%s" % id.to_upper())
 

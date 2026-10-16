@@ -28,6 +28,8 @@ static func play(strategy: Dictionary, seed_number: int, years: int,
 	out.built = 0
 	out.repair_by_season = {}
 	out.wear_by_season = {}
+	out.building_water_by_season = {}
+	out.water_deficit_by_season = {}
 	for _d in days:
 		sim.step_day()
 		var short := false
@@ -44,6 +46,13 @@ static func play(strategy: Dictionary, seed_number: int, years: int,
 		var sid := sim.calendar.season_id()
 		out.repair_by_season[sid] = out.repair_by_season.get(sid, 0.0) + sim.buildings.last_repair_points
 		out.wear_by_season[sid] = out.wear_by_season.get(sid, 0.0) + sim.buildings.last_wear_points
+		var bw := 0.0
+		for m in sim.modifiers.entries():
+			if m.key == "water_consumption" and m.source == SimBuildings.SOURCE:
+				bw += m.add
+		out.building_water_by_season[sid] = out.building_water_by_season.get(sid, 0.0) + bw
+		out.water_deficit_by_season[sid] = out.water_deficit_by_season.get(sid, 0.0) \
+			+ sim.resources.last_flow.water.deficit
 		out.health_min = minf(out.health_min, sim.population.health)
 		if sim.calendar.day_index % sim.calendar.days_per_year() == 0:
 			out.population_by_year.append(sim.population.people())

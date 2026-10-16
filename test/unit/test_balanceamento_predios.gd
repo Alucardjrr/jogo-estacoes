@@ -55,10 +55,15 @@ func test_d013_canteiro_cobra_manutencao_pelas_chuvas() -> void:
 	for sid in wear:
 		if sid != "chuvas":
 			assert_gt(wear.chuvas, wear[sid], "chuvas %.1f × %s %.1f" % [wear.chuvas, sid, wear[sid]])
-	var repaired := 0.0
-	for sid in r.repair_by_season:
-		repaired += r.repair_by_season[sid]
-	assert_gt(repaired, 0.0, "a dívida é paga com mão de obra")
+	# Ajuste 1 do diretor (D-032): a dívida vira custo real — o reparo pago na janela_2
+	# pela ordem centrada no canteiro supera o da ordem mista (média de 10 sementes).
+	var cant := 0.0
+	var mixed := 0.0
+	for s in SEEDS:
+		cant += Run.play(_with_buildings(["canteiro", "canteiro", "canteiro"]), s + 1, YEARS) \
+			.repair_by_season.get("janela_2", 0.0)
+		mixed += Run.play(_with_buildings(MIXED), s + 1, YEARS).repair_by_season.get("janela_2", 0.0)
+	assert_gt(cant, mixed, "reparo na janela_2: canteiro %.1f × mista %.1f" % [cant / SEEDS, mixed / SEEDS])
 
 
 func test_saque_esgota() -> void:

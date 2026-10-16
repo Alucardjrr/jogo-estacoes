@@ -1,0 +1,108 @@
+extends GutTest
+## Simulation + SimLoop: determinismo, fila de comandos e relógio de tempo real.
+
+
+func _new_sim(seed_number: int = 7) -> Simulation:
+	var sim := Simulation.new()
+	assert_true(sim.setup(seed_number), "erros: %s" % [sim.data.errors])
+	return sim
+
+
+func _run(sim: Simulation, days: int) -> Array:
+	# Consome o RNG a cada dia para provar que a sequência é reproduzível.
+	var draws := []
+	for _i in days:
+		sim.step_day()
+		draws.append(sim.loop.rng.randi())
+	return draws
+
+
+func test_mesma_semente_mesmo_resultado() -> void:
+	var a := _new_sim(123)
+	var b := _new_sim(123)
+	assert_eq(_run(a, 500), _run(b, 500))
+	assert_eq(a.snapshot(), b.snapshot())
+	assert_eq(a.drain_events(), b.drain_events())
+
+
+func test_sementes_diferentes_divergem() -> void:
+	assert_ne(_run(_new_sim(1), 50), _run(_new_sim(2), 50))
+
+
+func test_semente_padrao_vem_dos_dados() -> void:
+	var sim := Simulation.new()
+	assert_true(sim.setup())
+	assert_eq(sim.loop.seed_value, sim.data.section("sim").default_seed)
+
+
+func test_setup_com_dados_invalidos_nao_monta_sistemas() -> void:
+	var sim := Simulation.new()
+	assert_false(sim.setup(1, "user://pasta_que_nao_existe"))
+	assert_false(sim.is_ready())
+	assert_gt(sim.data.errors.size(), 0)
+
+
+func test_snapshot_reflete_o_calendario() -> void:
+	var sim := _new_sim()
+	_run(sim, 95)
+	var s := sim.snapshot()
+	assert_eq([s.day, s.month, s.year, s.season, s.day_in_season, s.season_days],
+		[6, 4, 1, "janela_1", 6, 90])
+
+
+func test_eventos_sao_drenados_uma_vez() -> void:
+	var sim := _new_sim()
+	_run(sim, 90)
+	assert_eq(sim.drain_events().size(), 1)
+	assert_eq(sim.drain_events(), [])
+
+
+func test_comando_aplicado_no_inicio_do_tick() -> void:
+	var sim := _new_sim()
+	assert_true(sim.enqueue({"type": "nao_existe"}))
+	assert_eq(sim.drain_events(), [], "comando não pode ser aplicado antes do tick")
+	sim.step_day()
+	var events := sim.drain_events()
+	assert_eq(events.size(), 1)
+	assert_eq(events[0].type, "command_rejected")
+
+
+func test_comando_sem_tipo_e_recusado() -> void:
+	var sim := _new_sim()
+	assert_false(sim.enqueue({}))
+	assert_false(sim.enqueue({"type": 5}))
+
+
+# --- Relógio (3 s por dia nos dados do projeto) ---
+
+func test_relogio_um_dia_a_cada_3s_em_1x() -> void:
+	var sim := _new_sim()
+	assert_eq(sim.advance(2.9, 1), 0)
+	assert_eq(sim.advance(0.1, 1), 1)
+	assert_eq(sim.calendar.day_index, 1)
+
+
+func test_relogio_velocidades() -> void:
+	var sim := _new_sim()
+	assert_eq(sim.advance(3.0, 2), 2)
+	assert_eq(sim.advance(3.0, 3), 3)
+
+
+func test_relogio_pausado_nao_avanca() -> void:
+	var sim := _new_sim()
+	assert_eq(sim.advance(100.0, 0), 0)
+	assert_eq(sim.calendar.day_index, 0)
+
+
+func test_relogio_limita_dias_por_frame() -> void:
+	var sim := _new_sim()
+	assert_eq(sim.advance(1000.0, 3), sim.loop.max_days_per_frame)
+	assert_eq(sim.advance(0.0, 3), 0, "excedente descartado, sem rajada depois")
+
+
+func test_relogio_acumula_frames_pequenos() -> void:
+	var sim := _new_sim()
+	var days := 0
+	for _i in 180:  # 3 s a 60 fps
+		days += sim.advance(1.0 / 60.0, 1)
+	assert_eq(days, 1)

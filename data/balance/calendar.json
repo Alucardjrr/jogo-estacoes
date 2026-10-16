@@ -1,0 +1,10 @@
+{
+  "days_per_month": 30,
+  "months_per_year": 12,
+  "seasons": [
+    { "id": "seca", "months": 3, "severe": true },
+    { "id": "janela_1", "months": 3, "severe": false },
+    { "id": "chuvas", "months": 3, "severe": true },
+    { "id": "janela_2", "months": 3, "severe": false }
+  ]
+}

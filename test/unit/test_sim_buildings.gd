@@ -40,9 +40,9 @@ func _value(m: ModifierStack, key: String, base: float = 0.0) -> float:
 func test_saque_rende_e_esgota() -> void:
 	var b := SimBuildings.new(CFG)
 	var m := ModifierStack.new()
-	b.step(_labor(0, 5), "seca", false, m)
+	b.step(_labor(0, 5), "seca", m)
 	assert_almost_eq(b.materials, 10.0, 1e-9, "5 × 2 × 100% restante")
-	b.step(_labor(0, 5), "seca", false, m)
+	b.step(_labor(0, 5), "seca", m)
 	assert_almost_eq(b.materials, 19.0, 1e-9, "5 × 2 × 90% restante")
 	assert_almost_eq(b.materials + b.ruins_remaining, 100.0, 1e-9)
 
@@ -50,10 +50,10 @@ func test_saque_rende_e_esgota() -> void:
 func test_fadiga_do_saque_cresce_com_o_esgotamento() -> void:
 	var b := SimBuildings.new(CFG)
 	var m := ModifierStack.new()
-	b.step(_labor(0, 5), "seca", false, m)
+	b.step(_labor(0, 5), "seca", m)
 	var first := _value(m, "health_drift")
 	for _i in 20:
-		b.step(_labor(0, 5), "seca", false, m)
+		b.step(_labor(0, 5), "seca", m)
 	assert_lt(_value(m, "health_drift"), first, "mais fundo nas ruínas, mais fadiga")
 	assert_almost_eq(first, -2.0 * 0.5 * 0.1, 1e-9, "metade da força, 10% esgotado")
 
@@ -62,10 +62,10 @@ func test_fila_reserva_materiais_e_constroi() -> void:
 	var b := SimBuildings.new(CFG)
 	b.materials = 60.0
 	b.enqueue("cist")
-	var ev := b.step(_labor(5, 0), "seca", false, ModifierStack.new())
+	var ev := b.step(_labor(5, 0), "seca", ModifierStack.new())
 	assert_eq(b.materials, 10.0, "reservado ao começar")
 	assert_eq(ev[0].type, "building_started")
-	ev = b.step(_labor(5, 0), "seca", false, ModifierStack.new())
+	ev = b.step(_labor(5, 0), "seca", ModifierStack.new())
 	assert_eq(b.count("cist"), 1)
 	assert_eq(ev.back().type, "building_completed")
 	assert_true(b.queue.is_empty())
@@ -76,7 +76,7 @@ func test_fila_espera_materiais_sem_pular() -> void:
 	b.materials = 20.0
 	b.enqueue("cist")  # 50: não dá
 	b.enqueue("silo")  # 10: daria, mas não pula a ordem
-	b.step(_labor(5, 0), "seca", false, ModifierStack.new())
+	b.step(_labor(5, 0), "seca", ModifierStack.new())
 	assert_eq(b.instances, [])
 	assert_eq(b.materials, 20.0)
 	assert_false(b.can_enqueue(), "max_queue = 2")
@@ -85,10 +85,10 @@ func test_fila_espera_materiais_sem_pular() -> void:
 func test_desgaste_por_estacao_e_abaixo_do_limiar() -> void:
 	var b := SimBuildings.new(CFG)
 	b.instances.append({"type": "cist", "condition": 100.0})
-	b.step(_labor(0, 0), "chuvas", false, ModifierStack.new())
+	b.step(_labor(0, 0), "chuvas", ModifierStack.new())
 	assert_eq(b.instances[0].condition, 96.0)
 	b.instances[0].condition = 50.0
-	b.step(_labor(0, 0), "chuvas", false, ModifierStack.new())
+	b.step(_labor(0, 0), "chuvas", ModifierStack.new())
 	assert_eq(b.instances[0].condition, 44.0, "abaixo de 60: × 1,5")
 	assert_almost_eq(b.last_wear_points, 12.0, 1e-9)
 
@@ -97,11 +97,11 @@ func test_reparo_pior_primeiro_e_mais_barato_na_janela() -> void:
 	var b := SimBuildings.new(CFG)
 	b.instances.append({"type": "silo", "condition": 90.0})
 	b.instances.append({"type": "silo", "condition": 70.0})
-	b.step(_labor(2, 0), "seca", false, ModifierStack.new())  # 2 pontos, 2 por 1%
+	b.step(_labor(2, 0), "seca", ModifierStack.new())  # 2 pontos, 2 por 1%
 	assert_almost_eq(b.instances[1].condition, 70.0 - 1.0 + 1.0, 1e-9, "o pior recebe o reparo")
 	assert_almost_eq(b.instances[0].condition, 89.0, 1e-9)
 	b.instances[1].condition = 50.0
-	b.step(_labor(2, 0), "chuvas", false, ModifierStack.new())  # custo × 0,5 → 2%
+	b.step(_labor(2, 0), "chuvas", ModifierStack.new())  # custo × 0,5 → 2%
 	assert_almost_eq(b.instances[1].condition, 50.0 - 6.0 + 2.0, 1e-9)
 	assert_almost_eq(b.last_repair_points, 2.0, 1e-9)
 
@@ -111,7 +111,7 @@ func test_reparo_antes_da_construcao() -> void:
 	b.instances.append({"type": "cist", "condition": 50.0})
 	b.materials = 100.0
 	b.enqueue("silo")
-	b.step(_labor(3, 0), "seca", false, ModifierStack.new())
+	b.step(_labor(3, 0), "seca", ModifierStack.new())
 	assert_false(b.queue[0].started and b.queue[0].progress > 0.0, "pontos foram para o reparo")
 
 
@@ -120,35 +120,57 @@ func test_efeitos_escalam_com_a_condicao() -> void:
 	b.instances.append({"type": "cist", "condition": 100.0})
 	b.instances.append({"type": "cist", "condition": 50.0})
 	var m := ModifierStack.new()
-	b.step(_labor(0, 0), "seca", false, m)
-	assert_almost_eq(_value(m, "water_capacity"), 1000.0 * 0.99 + 1000.0 * 0.485, 1e-6)
+	b.publish_effects("seca", false, m)
+	assert_almost_eq(_value(m, "water_capacity"), 1000.0 + 500.0, 1e-6)
+	b.publish_effects("seca", false, m)
+	assert_almost_eq(_value(m, "water_capacity"), 1500.0, 1e-6, "republicar substitui")
 
 
 func test_efeito_mul_com_filtro_de_estacao() -> void:
 	var b := SimBuildings.new(CFG)
 	b.instances.append({"type": "silo", "condition": 100.0})
 	b.instances.append({"type": "silo", "condition": 100.0})
+	b.instances[1].condition = 50.0
 	var m := ModifierStack.new()
-	b.step(_labor(0, 0), "seca", false, m)
+	b.publish_effects("seca", false, m)
 	assert_eq(_value(m, "food_loss_rate", 1.0), 1.0, "só nas chuvas")
-	b.instances[0].condition = 100.0
-	b.instances[1].condition = 100.0
-	b.step(_labor(0, 0), "chuvas", false, m)
-	var k := 0.96  # depois do desgaste do dia
-	assert_almost_eq(_value(m, "food_loss_rate", 1.0), pow(1.0 - 0.5 * k, 2), 1e-9)
+	b.publish_effects("chuvas", false, m)
+	assert_almost_eq(_value(m, "food_loss_rate", 1.0), 0.5 * 0.75, 1e-9)
 
 
 func test_efeito_que_exige_agua() -> void:
 	var b := SimBuildings.new(CFG)
 	b.instances.append({"type": "cant", "condition": 100.0})
 	var m := ModifierStack.new()
-	b.step(_labor(0, 0), "seca", true, m)
+	b.publish_effects("seca", true, m)
 	assert_eq(_value(m, "farm_mult"), 0.0, "faltou água ontem: sem bônus")
-	b.step(_labor(0, 0), "seca", false, m)
-	assert_gt(_value(m, "farm_mult"), 0.0)
+	b.publish_effects("seca", false, m)
+	assert_eq(_value(m, "farm_mult"), 1.0)
 
 
 # --- Integração ---
+
+func test_canteiro_vale_no_mesmo_dia_da_estacao() -> void:
+	# QA PR #10: Labor precisa ler o bônus da estação de hoje, não o de ontem.
+	var sim := Simulation.new()
+	assert_true(sim.setup(1))
+	sim.buildings.instances.append({"type": "canteiro", "condition": 100.0})
+	sim.calendar.day_index = 269  # último dia da chuvas → próximo é janela_2
+	sim.resources.stock.water = 6000.0
+	sim.step_day()
+	assert_eq(sim.calendar.season_id(), "janela_2")
+	var bonus := 0.0
+	for e in sim.modifiers.entries():
+		if e.key == "farm_mult" and e.source == SimBuildings.SOURCE:
+			bonus += e.add
+	assert_gt(bonus, 0.0, "1º dia da janela já tem o bônus")
+	sim.calendar.day_index = 179  # último dia da janela_1 → chuvas
+	sim.step_day()
+	assert_eq(sim.calendar.season_id(), "chuvas")
+	for e in sim.modifiers.entries():
+		assert_false(e.key == "farm_mult" and e.source == SimBuildings.SOURCE,
+			"1º dia das chuvas não tem o bônus")
+
 
 func test_capacidade_dos_recursos_segue_os_predios() -> void:
 	var sim := Simulation.new()

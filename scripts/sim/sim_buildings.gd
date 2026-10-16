@@ -1,9 +1,12 @@
 class_name SimBuildings
 extends RefCounted
-## Prédios (GDD 10, sistema 9; D-032). Passo 6 do tick, depois de Labor.
+## Prédios (GDD 10, sistema 9; D-032). Dois momentos no tick:
+##   5a. publish_effects(): antes de Labor, para Labor já ler farm_mult/gather_mult
+##       do dia (estação de hoje; condição e falta de água do fim de ontem).
+##   6.  step(): depois de Labor — saque, desgaste e obras.
 ## Sem mapa: prédios são instâncias abstratas {type, condition}; o mapa futuro só lê.
 ##
-## Por dia:
+## step():
 ##   1. Saque: trabalhadores do saque (efetivos, de Labor) tiram materiais das
 ##      ruínas; rendimento × fração restante. Fadiga do saque = salvage_fatigue ×
 ##      (fração da força no saque) × (fração já esgotada).
@@ -13,11 +16,12 @@ extends RefCounted
 ##      Primeiro reparo (pior condição primeiro; 1% custa points_per_condition ×
 ##      repair_cost_mult[estação]), depois a fila de construção. Materiais são
 ##      reservados quando a obra começa.
-##   4. Efeitos: publicados na pilha (fonte "buildings"), × condição/100.
-##      add: soma; mul: 1 − (1 − mul) × condição/100, multiplicado por prédio.
-##      Filtro de estação; requires_water pula o efeito se ontem faltou água.
+## publish_effects(): efeitos na pilha (fonte "buildings"), × condição/100.
+##   add: soma; mul: 1 − (1 − mul) × condição/100, multiplicado por prédio.
+##   Filtro de estação; requires_water pula o efeito se ontem faltou água.
 
 const SOURCE := "buildings"
+const SALVAGE_SOURCE := "salvage"
 
 var instances: Array[Dictionary] = []  # [{type, condition}]
 var queue: Array[Dictionary] = []      # [{type, progress, started}]
@@ -67,11 +71,10 @@ func count(id: String) -> int:
 	return instances.filter(func(b: Dictionary) -> bool: return b.type == id).size()
 
 
-## labor: SimLabor do dia (efetivos e força). water_short_yesterday: houve falta de água ontem.
-func step(labor: SimLabor, season_id: String, water_short_yesterday: bool,
-		modifiers: ModifierStack) -> Array[Dictionary]:
+## labor: SimLabor do dia (efetivos e força).
+func step(labor: SimLabor, season_id: String, modifiers: ModifierStack) -> Array[Dictionary]:
 	var events: Array[Dictionary] = []
-	modifiers.clear_source(SOURCE)
+	modifiers.clear_source(SALVAGE_SOURCE)
 
 	# 1. Saque
 	if ruins_initial > 0.0:
@@ -82,7 +85,7 @@ func step(labor: SimLabor, season_id: String, water_short_yesterday: bool,
 		materials += got
 		if labor.workers > 0:
 			var share: float = labor.assigned.salvage / labor.workers
-			modifiers.add("health_drift", SOURCE,
+			modifiers.add("health_drift", SALVAGE_SOURCE,
 				-_cfg.salvage_fatigue * share * (1.0 - ruins_remaining / ruins_initial))
 
 	# 2. Desgaste
@@ -130,8 +133,13 @@ func step(labor: SimLabor, season_id: String, water_short_yesterday: bool,
 			queue.pop_front()
 			instances.append({"type": job.type, "condition": 100.0})
 			events.append({"type": "building_completed", "building": job.type})
+	return events
 
-	# 4. Efeitos
+
+## water_short_yesterday: houve falta de água no último dia processado.
+func publish_effects(season_id: String, water_short_yesterday: bool,
+		modifiers: ModifierStack) -> void:
+	modifiers.clear_source(SOURCE)
 	var muls := {}
 	for b in instances:
 		var k: float = b.condition / 100.0
@@ -146,7 +154,6 @@ func step(labor: SimLabor, season_id: String, water_short_yesterday: bool,
 				modifiers.add(e.key, SOURCE, e.add * k)
 	for key in muls:
 		modifiers.mul(key, SOURCE, muls[key])
-	return events
 
 
 ## Condição prevista no fim da estação sem reparo (para a tela).

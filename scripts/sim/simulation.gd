@@ -2,8 +2,8 @@ class_name Simulation
 extends RefCounted
 ## Raiz da simulação (D-020). Roda sem tela: a apresentação só lê snapshot()
 ## e envia comandos. Ordem do tick conforme GDD 10; existem os passos
-## 0 (comandos), 1 (Calendar), 2 (Season), 5 (Labor), 6 (Buildings), 7 (Resources)
-## e 8 (Population).
+## 0 (comandos), 1 (Calendar), 2 (Season), 5a (efeitos dos prédios), 5 (Labor),
+## 6 (Buildings: saque, desgaste, obras), 7 (Resources) e 8 (Population).
 ##
 ## Comandos de jogo:
 ##   {"type": "set_labor", "task": "water"|"farm"|"care", "value": int ≥ 0}
@@ -63,11 +63,13 @@ func step_day() -> void:
 	# 2. Season publica as taxas do dia
 	season.publish(calendar, modifiers)
 	# 3..4: Forecast, Social — próximas etapas.
+	# 5a. Efeitos dos prédios (estação de hoje; condição e falta de água de ontem),
+	#     antes de Labor, que lê farm_mult/gather_mult
+	buildings.publish_effects(calendar.season_id(), resources.last_flow.water.deficit > 0.0, modifiers)
 	# 5. Labor publica a produção do dia (lê pessoas/saúde do fim de ontem)
 	labor.step(population.people(), population.health, modifiers)
-	# 6. Buildings: saque, desgaste, obras, efeitos (falta de água de ontem)
-	_events.append_array(buildings.step(labor, calendar.season_id(),
-		resources.last_flow.water.deficit > 0.0, modifiers))
+	# 6. Buildings: saque, desgaste, obras
+	_events.append_array(buildings.step(labor, calendar.season_id(), modifiers))
 	# 7. Resources
 	_events.append_array(resources.step(population.people(), modifiers))
 	# 8. Population (lê o déficit do dia em Resources)

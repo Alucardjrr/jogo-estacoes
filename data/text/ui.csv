@@ -28,11 +28,11 @@ EVENT_YEAR_CHANGED,Ano {year} começou,Year {year} began
 RESOURCE_WATER,Água,Water
 RESOURCE_FOOD,Comida,Food
 HUD_INTENSITY,Intensidade da estação ×{value},Season intensity ×{value}
-HUD_POPULATION,"População {people} ({families} famílias) · Saúde {health}","Population {people} ({families} families) · Health {health}"
+HUD_POPULATION,População {people} · Famílias {families} · Saúde {health},Population {people} · Families {families} · Health {health}
 HUD_RESOURCE,"{name}: {stock} / {capacity}   (+{inflow} entrada, −{consumed} consumo, −{lost} perda)","{name}: {stock} / {capacity}   (+{inflow} in, −{consumed} used, −{lost} lost)"
 HUD_OVERFLOW,transbordou {amount},overflow {amount}
 HUD_SHORTAGE,FALTA {amount},SHORTAGE {amount}
 HUD_MODIFIERS,Modificadores:,Modifiers:
 EVENT_DEATH,Uma pessoa da família {family} morreu,A member of family {family} died
-EVENT_FAMILY_LEFT,A família {family} ({size} pessoas) foi embora,Family {family} ({size} people) left
+EVENT_FAMILY_LEFT,A família {family} foi embora (pessoas: {size}),Family {family} left (people: {size})
 EVENT_COLONY_EMPTY,O assentamento ficou vazio,The settlement is empty

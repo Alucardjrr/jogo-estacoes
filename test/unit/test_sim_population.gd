@@ -141,3 +141,33 @@ func test_mesma_semente_mesmas_perdas() -> void:
 		eb.append_array(b.step(_flow(10.0, 10.0), _mods(), rb))
 	assert_eq(ea, eb)
 	assert_eq(a.families, b.families)
+
+
+func test_sementes_diferentes_escolhem_vitimas_diferentes() -> void:
+	var lefts := {}
+	for seed_number in 20:
+		var p := SimPopulation.new(_cfg({"families": [{"id": "a", "size": 2}, {"id": "b", "size": 2},
+			{"id": "c", "size": 2}, {"id": "d", "size": 2}], "departure_shortage_days": 1}))
+		lefts[p.step(_flow(0, 1.0), _mods(), _rng(seed_number))[0].family] = true
+	assert_gt(lefts.size(), 1, "a família que sai precisa vir do RNG, não de posição fixa")
+
+
+func test_saude_exatamente_no_limiar_nao_mata() -> void:
+	var p := SimPopulation.new(_cfg({"health_initial": 40.0, "health_recovery_per_day": 0.0,
+		"death_rate_max": 1.0}))
+	assert_eq(p.step(_flow(0, 0), _mods(), _rng()), [])
+	assert_eq(p.people(), 6)
+
+
+func test_morte_e_partida_no_mesmo_dia() -> void:
+	# 6 pessoas × 0,2 = 1,2 → 1 morte; depois 1 família sai.
+	var p := SimPopulation.new(_cfg({"health_initial": 0.0, "death_rate_max": 0.2,
+		"departure_shortage_days": 1}))
+	var events := p.step(_flow(0, 10.0), _mods(), _rng())
+	var types := events.map(func(e: Dictionary) -> String: return e.type)
+	assert_true(types.has("death"))
+	assert_true(types.has("family_left"))
+	var left: int = events.filter(func(e: Dictionary) -> bool: return e.type == "family_left")[0].size
+	var dead := types.count("death")
+	assert_eq(dead, 1)
+	assert_eq(p.people(), 6 - dead - left)

@@ -27,6 +27,10 @@ const LAB_OK := {"worker_share": 0.6, "full_productivity_health": 60, "min_produ
 	"care_health_max": 2.0, "fatigue_threshold": 0.5, "fatigue_health": 0.4,
 	"initial_allocation": {"water": 9, "farm": 18, "care": 3, "build": 0, "salvage": 0}}
 const SEASONS_2 := {"seca": 0.1, "chuvas": 0.3}
+const NAR_OK := {"hard_shortage_days": 10, "residents": 12, "diary_lines": 3,
+	"season_group": {"seca": "SECA", "chuvas": "CHUVAS"},
+	"reaction_lines": {"DEATH": 4, "FAMILY_LEFT": 4, "BUILDING_DONE": 4, "SHORTAGE_WATER": 3,
+		"SHORTAGE_FOOD": 3, "SEASON_SECA": 2, "SEASON_CHUVAS": 2}}
 const BLD_OK := {"work_points_per_worker": 1.0, "points_per_condition": 2.0,
 	"low_condition_threshold": 60, "low_condition_wear_mult": 1.5,
 	"repair_cost_mult": {"seca": 1.0, "chuvas": 1.0}, "salvage_per_worker": 1.0,
@@ -56,7 +60,7 @@ func _write(name: String, content: Variant) -> void:
 
 func _load_with(sim: Variant, cal: Variant, season: Variant = SEASON_OK,
 		res: Variant = RES_OK, pop: Variant = POP_OK, lab: Variant = LAB_OK,
-		bld: Variant = BLD_OK) -> DataRegistry:
+		bld: Variant = BLD_OK, nar: Variant = NAR_OK) -> DataRegistry:
 	_write("sim.json", sim)
 	_write("calendar.json", cal)
 	_write("season.json", season)
@@ -64,6 +68,7 @@ func _load_with(sim: Variant, cal: Variant, season: Variant = SEASON_OK,
 	_write("population.json", pop)
 	_write("labor.json", lab)
 	_write("buildings.json", bld)
+	_write("narrative.json", nar)
 	var reg := DataRegistry.new()
 	reg.load_all(TMP_DIR)
 	return reg
@@ -394,3 +399,17 @@ func test_buildings_ruinas_e_custos() -> void:
 	assert_true(_has_error(reg, "types.ruinas: chave desconhecida 'cost_points'"))
 	assert_true(_has_error(reg, "cost_points = 0"))
 	assert_true(_has_error(reg, "max_queue: 0 fora da faixa"))
+
+
+# --- narrative.json ---
+
+func test_narrative_grupos_e_linhas() -> void:
+	var nar := NAR_OK.duplicate(true)
+	nar.season_group = {"seca": "seca", "inverno": "INV"}
+	nar.reaction_lines.erase("DEATH")
+	var reg := _load_with(SIM_OK, CAL_OK, SEASON_OK, RES_OK, POP_OK, LAB_OK, BLD_OK, nar)
+	assert_false(reg.is_loaded())
+	assert_true(_has_error(reg, "season_group.seca inválido"))
+	assert_true(_has_error(reg, "falta a chave 'chuvas'"))
+	assert_true(_has_error(reg, "chave desconhecida 'inverno'"))
+	assert_true(_has_error(reg, "reaction_lines: falta a chave 'DEATH'"))

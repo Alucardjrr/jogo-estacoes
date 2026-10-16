@@ -3,7 +3,8 @@ extends RefCounted
 ## Raiz da simulação (D-020). Roda sem tela: a apresentação só lê snapshot()
 ## e envia comandos. Ordem do tick conforme GDD 10; existem os passos
 ## 0 (comandos), 1 (Calendar), 2 (Season), 5a (efeitos dos prédios), 5 (Labor),
-## 6 (Buildings: saque, desgaste, obras), 7 (Resources) e 8 (Population).
+## 6 (Buildings: saque, desgaste, obras), 7 (Resources), 8 (Population) e
+## 10 (Narrative: diário e falas, só texto).
 ##
 ## Comandos de jogo:
 ##   {"type": "set_labor", "task": "water"|"farm"|"care", "value": int ≥ 0}
@@ -20,6 +21,7 @@ var resources: SimResources
 var population: SimPopulation
 var labor: SimLabor
 var buildings: SimBuildings
+var narrative: SimNarrative
 var modifiers := ModifierStack.new()
 
 var _events: Array[Dictionary] = []
@@ -40,6 +42,7 @@ func setup(seed_number: int = -1, data_dir: String = DataRegistry.DEFAULT_DIR) -
 	population = SimPopulation.new(data.section("population"))
 	labor = SimLabor.new(data.section("labor"))
 	buildings = SimBuildings.new(data.section("buildings"))
+	narrative = SimNarrative.new(data.section("narrative"))
 	season.publish(calendar, modifiers)  # tela já mostra as taxas do dia 1
 	labor.step(population.people(), population.health, modifiers)
 	_events.clear()
@@ -55,6 +58,7 @@ func enqueue(command: Dictionary) -> bool:
 
 
 func step_day() -> void:
+	var first_event := _events.size()
 	# 0. Comandos
 	for command in loop.take_commands():
 		_apply_command(command)
@@ -74,7 +78,10 @@ func step_day() -> void:
 	_events.append_array(resources.step(population.people(), modifiers))
 	# 8. Population (lê o déficit do dia em Resources)
 	_events.append_array(population.step(resources.last_flow, modifiers, loop.rng))
-	# 9..10: Social, Narrative — próximas etapas.
+	# 9: Social — próxima etapa.
+	# 10. Narrative: lê os eventos do dia e acrescenta diário/falas
+	_events.append_array(narrative.step(calendar.day_index, calendar.year(),
+		population.people(), _events.slice(first_event)))
 
 
 ## Avança pelo relógio de tempo real. Retorna quantos dias passaram.

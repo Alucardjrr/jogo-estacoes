@@ -53,7 +53,8 @@ func test_snapshot_reflete_o_calendario() -> void:
 func test_eventos_sao_drenados_uma_vez() -> void:
 	var sim := _new_sim()
 	_run(sim, 90)
-	assert_eq(sim.drain_events().size(), 1)
+	var events := sim.drain_events()
+	assert_eq(events.filter(func(e: Dictionary) -> bool: return e.type == "season_changed").size(), 1)
 	assert_eq(sim.drain_events(), [])
 
 

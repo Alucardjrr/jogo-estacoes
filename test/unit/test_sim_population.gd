@@ -171,3 +171,15 @@ func test_morte_e_partida_no_mesmo_dia() -> void:
 	var dead := types.count("death")
 	assert_eq(dead, 1)
 	assert_eq(p.people(), 6 - dead - left)
+
+
+func test_sementes_diferentes_matam_em_familias_diferentes() -> void:
+	var victims := {}
+	for seed_number in 20:
+		var p := SimPopulation.new(_cfg({"families": [{"id": "a", "size": 2}, {"id": "b", "size": 2},
+			{"id": "c", "size": 2}, {"id": "d", "size": 2}], "health_initial": 0.0,
+			"health_recovery_per_day": 0.0, "death_rate_max": 0.125, "departure_shortage_days": 1000}))
+		var deaths := p.step(_flow(0, 0), _mods(), _rng(seed_number))  # 8 × 0,125 = 1 morte
+		assert_eq(deaths.size(), 1)
+		victims[deaths[0].family] = true
+	assert_gt(victims.size(), 1, "quem morre precisa vir do RNG, não de posição fixa")

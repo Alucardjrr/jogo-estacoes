@@ -37,6 +37,8 @@ frações por dia (0,004 = 0,4% do estoque por dia).
 | `.water_inflow` / `.food_inflow` | número | 0–100000 | Entrada natural por dia |
 | `.water_loss_rate` / `.food_loss_rate` | número | 0–1 | Perda por dia (evaporação, estrago) |
 | `.health_drift` | número | −10 a 10 | Variação diária de saúde (doença das chuvas) |
+| `.gather_mult` | número | 0–10 | Rendimento de "buscar água" na estação (D-031) |
+| `.farm_mult` | número | 0–10 | Rendimento da roça na estação (D-031) |
 | `.escalation` | objeto | expoentes −3 a 3 | Grandeza × intensidade^expoente. Negativo = piora diminuindo |
 
 ## balance/resources.json — estoques (D-025)
@@ -57,6 +59,25 @@ frações por dia (0,004 = 0,4% do estoque por dia).
 | `death_health_threshold` | número | 0–1000, ≤ `health_max` | Abaixo disso começam as mortes |
 | `death_rate_max` | número | 0–1 | Chance diária por pessoa com saúde 0 |
 | `departure_shortage_days` | inteiro | 1–1000 | Dias seguidos com falta até uma família ir embora |
+
+## balance/labor.json — mão de obra (D-031)
+| Campo | Tipo | Faixa | O que é |
+|---|---|---|---|
+| `worker_share` | número | 0–1 | Fração da população que trabalha (arredonda para baixo) |
+| `full_productivity_health` | número | > 0 | Saúde a partir da qual a produtividade é 100% |
+| `min_productivity` | número | 0–1 | Produtividade com saúde 0 (linear até o limiar) |
+| `water_per_worker` / `food_per_worker` | número | 0–1000 | Produção por trabalhador por dia, antes do multiplicador da estação |
+| `care_health_per_share` | número | 0–1000 | Saúde/dia = isto × cuidadores ÷ pessoas |
+| `care_health_max` | número | 0–100 | Teto do ganho de saúde pelo cuidado |
+| `fatigue_threshold` | número | 0–0,99 | Fração da força buscando água a partir da qual há fadiga |
+| `fatigue_health` | número | 0–100 | Perda de saúde/dia com 100% da força na água (proporcional ao excesso) |
+| `initial_allocation` | objeto | `water`, `farm`, `care` inteiros ≥ 0 | Distribuição inicial (linha de base sem jogador) |
+
+## Runner de balanceamento
+`godot --headless --path . -s tools/balance_runner.gd -- --seeds=10 --years=3` roda as
+estratégias de referência. Opções no cabeçalho de `tools/balance_runner.gd`
+(`--fixed=`, `--plan=`, `--search`, `--data=` para testar números em outra pasta).
+`test/unit/test_balanceamento.gd` trava a curva de dificuldade e o critério D-013.
 
 ## text/*.csv — textos (D-024)
 Formato do Godot: `keys,pt_BR,en`. Toda chave precisa das duas línguas e dos

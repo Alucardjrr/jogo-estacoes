@@ -2,7 +2,12 @@ class_name Simulation
 extends RefCounted
 ## Raiz da simulação (D-020). Roda sem tela: a apresentação só lê snapshot()
 ## e envia comandos. Ordem do tick conforme GDD 10; existem os passos
-## 0 (comandos), 1 (Calendar), 2 (Season), 7 (Resources) e 8 (Population).
+## 0 (comandos), 1 (Calendar), 2 (Season), 5 (Labor), 7 (Resources) e 8 (Population).
+##
+## Comandos de jogo:
+##   {"type": "set_labor", "task": "water"|"farm"|"care", "value": int ≥ 0}
+##   {"type": "adjust_labor", "task": ..., "delta": int} — soma ao pedido atual
+## Recusados viram evento "command_rejected" com o motivo; aceitos, "labor_changed".
 
 var data := DataRegistry.new()
 var loop: SimLoop
@@ -10,6 +15,7 @@ var calendar: SimCalendar
 var season: SimSeason
 var resources: SimResources
 var population: SimPopulation
+var labor: SimLabor
 var modifiers := ModifierStack.new()
 
 var _events: Array[Dictionary] = []
@@ -28,7 +34,9 @@ func setup(seed_number: int = -1, data_dir: String = DataRegistry.DEFAULT_DIR) -
 	modifiers = ModifierStack.new()
 	modifiers.register_keys(_modifier_keys())
 	population = SimPopulation.new(data.section("population"))
+	labor = SimLabor.new(data.section("labor"))
 	season.publish(calendar, modifiers)  # tela já mostra as taxas do dia 1
+	labor.step(population.people(), population.health, modifiers)
 	_events.clear()
 	return true
 
@@ -49,7 +57,10 @@ func step_day() -> void:
 	_events.append_array(calendar.advance())
 	# 2. Season publica as taxas do dia
 	season.publish(calendar, modifiers)
-	# 3..6: Forecast, Social, Labor, Buildings — próximas etapas.
+	# 3..4: Forecast, Social — próximas etapas.
+	# 5. Labor publica a produção do dia (lê pessoas/saúde do fim de ontem)
+	labor.step(population.people(), population.health, modifiers)
+	# 6: Buildings — próxima etapa.
 	# 7. Resources
 	_events.append_array(resources.step(population.people(), modifiers))
 	# 8. Population (lê o déficit do dia em Resources)
@@ -86,6 +97,7 @@ func snapshot() -> Dictionary:
 		"families": population.families.size(),
 		"health": population.health,
 		"shortage_streak": population.shortage_streak,
+		"labor": labor.snapshot(),
 		"resources": _resources_snapshot(),
 		"modifiers": modifiers.entries(),
 		"seed": loop.seed_value,
@@ -111,6 +123,32 @@ func _resources_snapshot() -> Dictionary:
 
 
 func _apply_command(command: Dictionary) -> void:
-	# Nenhum comando de jogo existe ainda; desconhecido vira evento, não erro fatal.
-	_events.append({"type": "command_rejected", "command": command.get("type"),
-		"reason": "tipo desconhecido"})
+	match command.type:
+		"set_labor", "adjust_labor":
+			_apply_labor(command)
+		_:
+			_reject(command, "tipo desconhecido")
+
+
+func _apply_labor(command: Dictionary) -> void:
+	var task: Variant = command.get("task")
+	if not task is String or not DataRegistry.TASK_IDS.has(task):
+		_reject(command, "tarefa inválida")
+		return
+	var key := "value" if command.type == "set_labor" else "delta"
+	var raw: Variant = command.get(key)
+	# Inteiro de verdade: JSON/replay entregam float; 2.5, texto ou null são recusados.
+	if not (raw is int or (raw is float and raw == floorf(raw) and absf(raw) < 1e6)):
+		_reject(command, "%s precisa ser inteiro" % key)
+		return
+	var n := int(raw)
+	var value: int = n if command.type == "set_labor" else labor.desired[task] + n
+	if value < 0:
+		_reject(command, "valor negativo")
+		return
+	labor.set_desired(task, value)
+	_events.append({"type": "labor_changed", "task": task, "value": value})
+
+
+func _reject(command: Dictionary, reason: String) -> void:
+	_events.append({"type": "command_rejected", "command": command.get("type"), "reason": reason})

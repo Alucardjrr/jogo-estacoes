@@ -6,10 +6,11 @@ const CAL := {"days_per_month": 30, "months_per_year": 12, "seasons": [
 	{"id": "janela", "months": 6, "severe": false}]}
 const CFG := {"intensity_per_year": 0.5, "intensity_max": 2.0, "transition_days": 0, "seasons": {
 	"seca": {"water_inflow": 10.0, "water_loss_rate": 0.01, "food_inflow": 20.0,
-		"food_loss_rate": 0.0, "health_drift": -0.5,
+		"food_loss_rate": 0.0, "health_drift": -0.5, "gather_mult": 1.0, "farm_mult": 0.2,
 		"escalation": {"water_inflow": -1.0, "water_loss_rate": 1.0, "health_drift": 1.0}},
 	"janela": {"water_inflow": 50.0, "water_loss_rate": 0.0, "food_inflow": 60.0,
-		"food_loss_rate": 0.0, "health_drift": 0.0, "escalation": {"water_inflow": 1.0}}}}
+		"food_loss_rate": 0.0, "health_drift": 0.0, "gather_mult": 0.6, "farm_mult": 1.4,
+		"escalation": {"water_inflow": 1.0}}}}
 
 
 func _cal(year: int, severe: bool) -> SimCalendar:

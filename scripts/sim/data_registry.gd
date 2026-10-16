@@ -12,7 +12,11 @@ const DEFAULT_DIR := "res://data/balance"
 const RESOURCE_IDS: PackedStringArray = ["water", "food"]
 ## Grandezas que Season publica por estação (uma por recurso e tipo).
 const SEASON_KEYS: PackedStringArray = [
-	"water_inflow", "water_loss_rate", "food_inflow", "food_loss_rate", "health_drift"]
+	"water_inflow", "water_loss_rate", "food_inflow", "food_loss_rate", "health_drift",
+	"gather_mult", "farm_mult"]
+## Tarefas de mão de obra (D-031). Fixas no código: cada uma tem regra própria em
+## SimLabor; os números vêm de labor.json.
+const TASK_IDS: PackedStringArray = ["water", "farm", "care"]
 
 var errors: PackedStringArray = []
 
@@ -29,6 +33,7 @@ func load_all(dir: String = DEFAULT_DIR) -> bool:
 		"season": _load_json(dir.path_join("season.json")),
 		"resources": _load_json(dir.path_join("resources.json")),
 		"population": _load_json(dir.path_join("population.json")),
+		"labor": _load_json(dir.path_join("labor.json")),
 	}
 	var parsed := {}
 	if loaded.sim is Dictionary:
@@ -46,6 +51,8 @@ func load_all(dir: String = DEFAULT_DIR) -> bool:
 		parsed.resources = _parse_resources(loaded.resources, "resources.json")
 	if loaded.population is Dictionary:
 		parsed.population = _parse_population(loaded.population, "population.json")
+	if loaded.labor is Dictionary:
+		parsed.labor = _parse_labor(loaded.labor, "labor.json")
 	if not errors.is_empty():
 		return false
 	_data = parsed
@@ -57,7 +64,7 @@ func is_loaded() -> bool:
 
 
 ## Dados já normalizados (ints como int) de um sistema: "sim", "calendar",
-## "season", "resources" ou "population".
+## "season", "resources", "population" ou "labor".
 func section(name: String) -> Dictionary:
 	return _data.get(name, {})
 
@@ -181,6 +188,8 @@ func _parse_season(d: Dictionary, src: String, calendar: Dictionary) -> Dictiona
 			"food_inflow": _float(s, "food_inflow", where, 0.0, 100000.0),
 			"food_loss_rate": _float(s, "food_loss_rate", where, 0.0, 1.0),
 			"health_drift": _float(s, "health_drift", where, -10.0, 10.0),
+			"gather_mult": _float(s, "gather_mult", where, 0.0, 10.0),
+			"farm_mult": _float(s, "farm_mult", where, 0.0, 10.0),
 			"escalation": {},
 		}
 		if s.has("escalation"):
@@ -275,6 +284,35 @@ func _parse_population(d: Dictionary, src: String) -> Dictionary:
 			errors.append("%s: id repetido '%s'" % [where, id])
 		ids[id] = true
 		out.families.append({"id": id, "size": _int(f, "size", where, 1, 50)})
+	return out
+
+
+func _parse_labor(d: Dictionary, src: String) -> Dictionary:
+	_check_keys(d, ["worker_share", "full_productivity_health", "min_productivity",
+		"water_per_worker", "food_per_worker", "care_health_per_share", "care_health_max",
+		"fatigue_threshold", "fatigue_health", "initial_allocation"], src)
+	var out := {
+		"worker_share": _float(d, "worker_share", src, 0.0, 1.0),
+		"full_productivity_health": _float(d, "full_productivity_health", src, 0.01, 1000.0),
+		"min_productivity": _float(d, "min_productivity", src, 0.0, 1.0),
+		"water_per_worker": _float(d, "water_per_worker", src, 0.0, 1000.0),
+		"food_per_worker": _float(d, "food_per_worker", src, 0.0, 1000.0),
+		"care_health_per_share": _float(d, "care_health_per_share", src, 0.0, 1000.0),
+		"care_health_max": _float(d, "care_health_max", src, 0.0, 100.0),
+		"fatigue_threshold": _float(d, "fatigue_threshold", src, 0.0, 0.99),
+		"fatigue_health": _float(d, "fatigue_health", src, 0.0, 100.0),
+		"initial_allocation": {},
+	}
+	if not d.has("initial_allocation"):
+		return out
+	if not d.initial_allocation is Dictionary:
+		errors.append("%s: initial_allocation precisa ser um objeto {}" % src)
+		return out
+	var alloc: Dictionary = d.initial_allocation
+	var where := src + ": initial_allocation"
+	_check_keys(alloc, Array(TASK_IDS), where)
+	for id in TASK_IDS:
+		out.initial_allocation[id] = _int(alloc, id, where, 0, 10000)
 	return out
 
 

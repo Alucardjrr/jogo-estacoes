@@ -1,46 +1,56 @@
 {
-  "intensity_per_year": 0.15,
+  "intensity_per_year": 0.18,
   "intensity_max": 2.0,
   "transition_days": 20,
   "seasons": {
     "seca": {
-      "water_inflow": 12,
+      "water_inflow": 2,
       "water_loss_rate": 0.004,
-      "food_inflow": 25,
+      "food_inflow": 3,
       "food_loss_rate": 0.002,
       "health_drift": 0,
+      "gather_mult": 0.9,
+      "farm_mult": 0.2,
       "escalation": {
         "water_inflow": -1,
         "water_loss_rate": 1,
-        "food_inflow": -1
+        "gather_mult": -1,
+        "farm_mult": -1
       }
     },
     "janela_1": {
-      "water_inflow": 55,
+      "water_inflow": 26,
       "water_loss_rate": 0.002,
-      "food_inflow": 70,
+      "food_inflow": 5,
       "food_loss_rate": 0.003,
       "health_drift": 0,
+      "gather_mult": 0.6,
+      "farm_mult": 1.4,
       "escalation": {}
     },
     "chuvas": {
-      "water_inflow": 110,
+      "water_inflow": 70,
       "water_loss_rate": 0.0005,
-      "food_inflow": 40,
+      "food_inflow": 3,
       "food_loss_rate": 0.008,
-      "health_drift": -0.35,
+      "health_drift": -0.7,
+      "gather_mult": 0.35,
+      "farm_mult": 0.6,
       "escalation": {
         "water_inflow": 1,
         "food_loss_rate": 1,
-        "health_drift": 1
+        "health_drift": 1,
+        "farm_mult": -1
       }
     },
     "janela_2": {
-      "water_inflow": 55,
+      "water_inflow": 26,
       "water_loss_rate": 0.002,
-      "food_inflow": 70,
+      "food_inflow": 5,
       "food_loss_rate": 0.003,
       "health_drift": 0,
+      "gather_mult": 0.6,
+      "farm_mult": 1.4,
       "escalation": {}
     }
   }

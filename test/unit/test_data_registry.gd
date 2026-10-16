@@ -10,9 +10,11 @@ const CAL_OK := {"days_per_month": 30, "months_per_year": 12, "seasons": [
 	{"id": "chuvas", "months": 6, "severe": true}]}
 const SEASON_OK := {"intensity_per_year": 0.15, "intensity_max": 2.0, "transition_days": 20, "seasons": {
 	"seca": {"water_inflow": 12, "water_loss_rate": 0.004, "food_inflow": 25,
-		"food_loss_rate": 0.002, "health_drift": 0, "escalation": {"water_inflow": -1}},
+		"food_loss_rate": 0.002, "health_drift": 0, "gather_mult": 0.9, "farm_mult": 0.2,
+		"escalation": {"water_inflow": -1}},
 	"chuvas": {"water_inflow": 110, "water_loss_rate": 0.0005, "food_inflow": 40,
-		"food_loss_rate": 0.008, "health_drift": -0.35, "escalation": {"health_drift": 1}}}}
+		"food_loss_rate": 0.008, "health_drift": -0.35, "gather_mult": 0.35, "farm_mult": 0.6,
+		"escalation": {"health_drift": 1}}}}
 const RES_OK := {"resources": {
 	"water": {"initial": 4500, "capacity": 6000, "per_capita_daily": 1.0},
 	"food": {"initial": 3000, "capacity": 6000, "per_capita_daily": 1.0}}}
@@ -20,6 +22,10 @@ const POP_OK := {"families": [{"id": "f01", "size": 5}, {"id": "f02", "size": 3}
 	"health_initial": 80, "health_max": 100, "health_recovery_per_day": 0.2,
 	"water_shortage_health": 8, "food_shortage_health": 3, "death_health_threshold": 40,
 	"death_rate_max": 0.004, "departure_shortage_days": 10}
+const LAB_OK := {"worker_share": 0.6, "full_productivity_health": 60, "min_productivity": 0.5,
+	"water_per_worker": 2.5, "food_per_worker": 3.5, "care_health_per_share": 10,
+	"care_health_max": 2.0, "fatigue_threshold": 0.5, "fatigue_health": 0.4,
+	"initial_allocation": {"water": 9, "farm": 18, "care": 3}}
 
 
 func before_each() -> void:
@@ -39,12 +45,13 @@ func _write(name: String, content: Variant) -> void:
 
 
 func _load_with(sim: Variant, cal: Variant, season: Variant = SEASON_OK,
-		res: Variant = RES_OK, pop: Variant = POP_OK) -> DataRegistry:
+		res: Variant = RES_OK, pop: Variant = POP_OK, lab: Variant = LAB_OK) -> DataRegistry:
 	_write("sim.json", sim)
 	_write("calendar.json", cal)
 	_write("season.json", season)
 	_write("resources.json", res)
 	_write("population.json", pop)
+	_write("labor.json", lab)
 	var reg := DataRegistry.new()
 	reg.load_all(TMP_DIR)
 	return reg
@@ -300,3 +307,33 @@ func test_transicao_limitada_pela_estacao_mais_curta_de_verdade() -> void:
 	assert_true(_has_error(_load_with(SIM_OK, cal, season), "maior que a estação mais curta (60 dias)"))
 	season.transition_days = 60
 	assert_true(_load_with(SIM_OK, cal, season).is_loaded())
+
+
+# --- labor.json ---
+
+func test_labor_valida_e_normaliza() -> void:
+	var reg := _load_with(SIM_OK, CAL_OK)
+	assert_true(reg.is_loaded(), "erros: %s" % [reg.errors])
+	assert_typeof(reg.section("labor").initial_allocation.farm, TYPE_INT)
+
+
+func test_labor_alocacao_invalida() -> void:
+	var lab := LAB_OK.duplicate(true)
+	lab.initial_allocation = {"water": -1, "farm": 2.5, "pesca": 3}
+	var reg := _load_with(SIM_OK, CAL_OK, SEASON_OK, RES_OK, POP_OK, lab)
+	assert_false(reg.is_loaded())
+	assert_true(_has_error(reg, "water: -1 fora da faixa"))
+	assert_true(_has_error(reg, "farm: precisa ser inteiro"))
+	assert_true(_has_error(reg, "chave desconhecida 'pesca'"))
+	assert_true(_has_error(reg, "falta a chave 'care'"))
+
+
+func test_labor_faixas() -> void:
+	var lab := LAB_OK.duplicate(true)
+	lab.worker_share = 1.5
+	lab.fatigue_threshold = 1.0
+	lab.full_productivity_health = 0
+	var reg := _load_with(SIM_OK, CAL_OK, SEASON_OK, RES_OK, POP_OK, lab)
+	assert_true(_has_error(reg, "worker_share = 1.5"))
+	assert_true(_has_error(reg, "fatigue_threshold = 1"))
+	assert_true(_has_error(reg, "full_productivity_health = 0"))

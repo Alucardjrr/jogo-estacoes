@@ -42,3 +42,30 @@ func test_entries_e_copia() -> void:
 	m.add("x", "a", 1.0)
 	m.entries()[0].add = 999.0
 	assert_eq(m.value("x"), 1.0)
+
+
+func test_chave_desconhecida_vira_aviso_uma_vez() -> void:
+	var m := ModifierStack.new()
+	m.register_keys(["water_inflow"])
+	m.add("water_inflow", "a", 1.0)
+	assert_eq(m.warnings.size(), 0)
+	m.add("water_inflw", "a", 1.0)
+	m.value("water_inflw")
+	assert_eq(m.warnings.size(), 1, "mesma chave avisa uma vez só")
+	assert_true(m.warnings[0].contains("water_inflw"))
+	m.mul("outra", "b", 2.0)
+	assert_eq(m.warnings.size(), 2)
+
+
+func test_sem_registro_aceita_tudo() -> void:
+	var m := ModifierStack.new()
+	m.value("qualquer")
+	assert_eq(m.warnings.size(), 0)
+
+
+func test_simulacao_nao_gera_avisos() -> void:
+	var sim := Simulation.new()
+	assert_true(sim.setup(1))
+	for _i in 400:
+		sim.step_day()
+	assert_eq(sim.modifiers.warnings, PackedStringArray(), "todo modificador usado precisa estar registrado")

@@ -1,0 +1,107 @@
+{
+  "work_points_per_worker": 1.0,
+  "points_per_condition": 2.0,
+  "low_condition_threshold": 60,
+  "low_condition_wear_mult": 1.5,
+  "repair_cost_mult": {
+    "seca": 1.0,
+    "janela_1": 0.5,
+    "chuvas": 1.0,
+    "janela_2": 0.5
+  },
+  "salvage_per_worker": 2.0,
+  "salvage_fatigue": 2.0,
+  "max_queue": 5,
+  "types": {
+    "ruinas": {
+      "ruins": true,
+      "materials": 800
+    },
+    "cisterna": {
+      "cost_materials": 96,
+      "cost_points": 60,
+      "wear": {
+        "seca": 0.05,
+        "janela_1": 0.02,
+        "chuvas": 0.1,
+        "janela_2": 0.02
+      },
+      "effects": [
+        {
+          "key": "water_capacity",
+          "add": 3000
+        }
+      ]
+    },
+    "silo": {
+      "cost_materials": 80,
+      "cost_points": 50,
+      "wear": {
+        "seca": 0.05,
+        "janela_1": 0.05,
+        "chuvas": 0.3,
+        "janela_2": 0.05
+      },
+      "effects": [
+        {
+          "key": "food_loss_rate",
+          "mul": 0.5
+        },
+        {
+          "key": "food_capacity",
+          "add": 1500
+        }
+      ]
+    },
+    "canteiro": {
+      "cost_materials": 64,
+      "cost_points": 40,
+      "wear": {
+        "seca": 0.1,
+        "janela_1": 0.05,
+        "chuvas": 0.4,
+        "janela_2": 0.05
+      },
+      "effects": [
+        {
+          "key": "farm_mult",
+          "add": 0.8,
+          "seasons": [
+            "seca",
+            "janela_1",
+            "janela_2"
+          ],
+          "requires_water": true
+        },
+        {
+          "key": "water_consumption",
+          "add": 5,
+          "seasons": [
+            "seca",
+            "janela_1",
+            "janela_2"
+          ]
+        }
+      ]
+    },
+    "abrigo": {
+      "cost_materials": 80,
+      "cost_points": 60,
+      "wear": {
+        "seca": 0.05,
+        "janela_1": 0.05,
+        "chuvas": 0.3,
+        "janela_2": 0.05
+      },
+      "effects": [
+        {
+          "key": "health_drift",
+          "add": 0.5,
+          "seasons": [
+            "chuvas"
+          ]
+        }
+      ]
+    }
+  }
+}

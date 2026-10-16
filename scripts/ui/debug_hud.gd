@@ -12,6 +12,16 @@ var _status_label := Label.new()
 var _intensity_label := Label.new()
 var _resource_labels := {}  # id do recurso -> Label
 var _modifiers_label := Label.new()
+var _labor_label := Label.new()
+## Ajustes de mão de obra já enviados e ainda não aplicados (aplicam no próximo dia).
+var _pending := {}
+var _last_snapshot := {}
+const LABOR_KEYS := {KEY_Q: ["water", 1], KEY_A: ["water", -1], KEY_W: ["farm", 1],
+	KEY_S: ["farm", -1], KEY_E: ["care", 1], KEY_D: ["care", -1], KEY_R: ["build", 1],
+	KEY_F: ["build", -1], KEY_T: ["salvage", 1], KEY_G: ["salvage", -1]}
+## Teclas da fila de obras (só debug). Id sem tecla não pode ser pedido por aqui.
+const BUILD_KEYS := {KEY_Z: "cisterna", KEY_X: "silo", KEY_C: "canteiro", KEY_V: "abrigo"}
+var _buildings_label := Label.new()
 var _help_label := Label.new()
 var _log_label := Label.new()
 var _pause_button := Button.new()
@@ -43,7 +53,12 @@ func _ready() -> void:
 		l.add_theme_font_size_override("font_size", 20)
 		_resource_labels[id] = l
 		box.add_child(l)
+	_labor_label.add_theme_font_size_override("font_size", 20)
+	box.add_child(_labor_label)
+	_buildings_label.add_theme_font_size_override("font_size", 18)
+	box.add_child(_buildings_label)
 	_modifiers_label.modulate = Color(1, 1, 1, 0.6)
+	_modifiers_label.visible = Game.dev_mode  # detalhe interno: só em dev (D-029)
 	box.add_child(_modifiers_label)
 	box.add_child(_status_label)
 
@@ -88,6 +103,29 @@ func _unhandled_input(event: InputEvent) -> void:
 				Game.set_paused(true)
 		KEY_1, KEY_2, KEY_3:
 			Game.set_speed_index(event.keycode - KEY_1)
+		_:
+			if LABOR_KEYS.has(event.keycode):
+				_adjust_labor(LABOR_KEYS[event.keycode][0], LABOR_KEYS[event.keycode][1])
+			elif BUILD_KEYS.has(event.keycode):
+				Game.build(BUILD_KEYS[event.keycode])
+
+
+func _adjust_labor(task: String, delta: int) -> void:
+	if _last_snapshot.is_empty():
+		return
+	var lab: Dictionary = _last_snapshot.labor
+	var current: int = lab.desired[task] + _pending.get(task, 0)
+	if current + delta < 0:
+		return
+	if delta > 0:
+		var total := 0
+		for id in DataRegistry.TASK_IDS:
+			total += lab.desired[id] + _pending.get(id, 0)
+		if total >= lab.workers:
+			return  # sem trabalhadores livres
+	_pending[task] = _pending.get(task, 0) + delta
+	Game.adjust_labor(task, delta)
+	_refresh(_last_snapshot)
 
 
 func _refresh_all() -> void:
@@ -106,9 +144,11 @@ func _refresh_all() -> void:
 
 
 func _on_day_passed(snapshot: Dictionary, events: Array[Dictionary]) -> void:
+	_pending.clear()  # já aplicados no início do tick
 	_refresh(snapshot)
 	for e in events:
-		if e.type in ["season_changed", "year_changed", "death", "family_left", "colony_empty"]:
+		if e.type in ["season_changed", "year_changed", "death", "family_left", "colony_empty",
+				"diary", "speech"]:
 			_log_events.append(e)
 	while _log_events.size() > LOG_LINES:
 		_log_events.remove_at(0)
@@ -121,7 +161,8 @@ func _on_speed_changed() -> void:
 
 
 func _refresh(s: Dictionary) -> void:
-	_date_label.text = tr("HUD_DATE").format(
+	_last_snapshot = s
+	_date_label.text = tr("SETTLEMENT_NAME") + " — " + tr("HUD_DATE").format(
 		{"day": s.day, "month": tr("MONTH_%d" % s.month), "year": s.year})
 	_season_label.text = tr("HUD_SEASON").format(
 		{"season": _season_name(s.season), "day": s.day_in_season, "total": s.season_days})
@@ -136,6 +177,11 @@ func _refresh(s: Dictionary) -> void:
 			"name": tr("RESOURCE_" + id.to_upper()),
 			"stock": roundi(r.stock), "capacity": roundi(r.capacity),
 			"inflow": _num(r.inflow), "consumed": _num(r.consumed), "lost": _num(r.lost)})
+		var net: float = r.inflow - r.demand - r.lost
+		if net < 0.0:
+			label.text += "  " + tr("HUD_DAYS_LEFT").format({"days": days_left(r.stock, net)})
+		else:
+			label.text += "  " + tr("HUD_STABLE")
 		if r.overflow > 0.0:
 			label.text += "  " + tr("HUD_OVERFLOW").format({"amount": _num(r.overflow)})
 		if r.deficit > 0.0:
@@ -145,10 +191,59 @@ func _refresh(s: Dictionary) -> void:
 			label.modulate = Color("ffb36b")
 		else:
 			label.modulate = Color.WHITE
+	var lab: Dictionary = s.labor
+	var shown := {}
+	for id in DataRegistry.TASK_IDS:
+		shown[id] = lab.desired[id] + _pending.get(id, 0)
+	_labor_label.text = tr("HUD_LABOR").format({"water": shown.water, "farm": shown.farm,
+		"care": shown.care, "build": shown.build, "salvage": shown.salvage,
+		"idle": roundi(lab.idle), "workers": lab.workers,
+		"productivity": roundi(lab.productivity * 100.0)})
+	if not lab.changed and _pending.is_empty():
+		_labor_label.text += "  " + tr("HUD_LABOR_INITIAL")
+	_buildings_label.text = _buildings_text(s)
 	var mods: PackedStringArray = []
 	for m in s.modifiers:
 		mods.append("%s %s" % [m.key, ("×%.2f" % m.mul) if m.mul != 1.0 else "+" + _num(m.add)])
 	_modifiers_label.text = tr("HUD_MODIFIERS") + " " + " · ".join(mods)
+
+
+func _buildings_text(s: Dictionary) -> String:
+	var b: Dictionary = s.buildings
+	var days_left: int = s.season_days - s.day_in_season
+	var parts: PackedStringArray = []
+	var by_type := {}
+	for inst in b.instances:
+		by_type[inst.type] = by_type.get(inst.type, []) + [inst]
+	var types := by_type.keys()
+	types.sort()
+	for t in types:
+		var cond := 0.0
+		var end := 0.0
+		for inst in by_type[t]:
+			cond += inst.condition
+			end += Game.sim.buildings.forecast_condition(inst, s.season, days_left)
+		var n: int = by_type[t].size()
+		parts.append(tr("HUD_BUILDING").format({"name": tr("BUILDING_" + t.to_upper()),
+			"count": n, "condition": roundi(cond / n), "end": roundi(end / n)}))
+	var text := tr("HUD_BUILDINGS") + " " + (" · ".join(parts) if not parts.is_empty() else "—")
+	text += "\n" + tr("HUD_MATERIALS").format({"materials": roundi(b.materials),
+		"ruins": roundi(b.ruins_remaining), "ruins_total": roundi(b.ruins_initial)})
+	if not b.queue.is_empty():
+		var job: Dictionary = b.queue[0]
+		var key := "HUD_QUEUE_WORKING" if job.started else "HUD_QUEUE_WAITING"
+		text += "  " + tr(key).format({"name": tr("BUILDING_" + job.type.to_upper()),
+			"progress": roundi(job.progress), "cost": roundi(job.cost_points),
+			"materials": roundi(job.cost_materials), "queued": b.queue.size()})
+	return text
+
+
+## Dias até o estoque acabar com o saldo diário `net` (< 0). Arredonda para cima:
+## 0,4 dia de estoque ainda é "1 dia"; estoque zerado é 0.
+static func days_left(stock: float, net: float) -> int:
+	if stock <= 0.0:
+		return 0
+	return ceili(stock / -net)
 
 
 ## Número curto para a tela: inteiro se >= 10, 1 casa se >= 0,1, senão 4 casas (taxas).
@@ -175,6 +270,13 @@ func _render_log() -> void:
 				lines.append(tr("EVENT_FAMILY_LEFT").format({"family": e.family, "size": e.size}))
 			"colony_empty":
 				lines.append(tr("EVENT_COLONY_EMPTY"))
+			"diary":
+				lines.append(tr("HUD_DIARY") + " " + tr(e.key).format(e.params))
+			"speech":
+				var params := {"name": tr(e.resident)}
+				if e.has("building"):
+					params.building = tr("BUILDING_" + String(e.building).to_upper())
+				lines.append(tr(e.key).format(params))
 	_log_label.text = "\n".join(lines)
 
 

@@ -1,0 +1,18 @@
+{
+  "worker_share": 0.6,
+  "full_productivity_health": 60,
+  "min_productivity": 0.5,
+  "water_per_worker": 2.5,
+  "food_per_worker": 3.5,
+  "care_health_per_share": 10,
+  "care_health_max": 2.0,
+  "fatigue_threshold": 0.5,
+  "fatigue_health": 0.4,
+  "initial_allocation": {
+    "water": 9,
+    "farm": 18,
+    "care": 3,
+    "build": 0,
+    "salvage": 0
+  }
+}

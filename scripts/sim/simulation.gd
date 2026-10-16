@@ -2,7 +2,16 @@ class_name Simulation
 extends RefCounted
 ## Raiz da simulação (D-020). Roda sem tela: a apresentação só lê snapshot()
 ## e envia comandos. Ordem do tick conforme GDD 10; existem os passos
-## 0 (comandos), 1 (Calendar), 2 (Season), 7 (Resources) e 8 (Population).
+## 0 (comandos), 1 (Calendar), 2 (Season), 5a (efeitos dos prédios), 5 (Labor),
+## 6 (Buildings: saque, desgaste, obras), 7 (Resources), 8 (Population) e
+## 10 (Narrative: diário e falas, só texto).
+##
+## Comandos de jogo:
+##   {"type": "set_labor", "task": "water"|"farm"|"care", "value": int ≥ 0}
+##   {"type": "adjust_labor", "task": ..., "delta": int} — soma ao pedido atual
+##   {"type": "build", "building": id} — põe na fila de obras
+## Recusados viram evento "command_rejected" com o motivo; aceitos, "labor_changed"
+## ou "build_queued".
 
 var data := DataRegistry.new()
 var loop: SimLoop
@@ -10,6 +19,9 @@ var calendar: SimCalendar
 var season: SimSeason
 var resources: SimResources
 var population: SimPopulation
+var labor: SimLabor
+var buildings: SimBuildings
+var narrative: SimNarrative
 var modifiers := ModifierStack.new()
 
 var _events: Array[Dictionary] = []
@@ -26,8 +38,13 @@ func setup(seed_number: int = -1, data_dir: String = DataRegistry.DEFAULT_DIR) -
 	season = SimSeason.new(data.section("season"))
 	resources = SimResources.new(data.section("resources"))
 	modifiers = ModifierStack.new()
+	modifiers.register_keys(_modifier_keys())
 	population = SimPopulation.new(data.section("population"))
+	labor = SimLabor.new(data.section("labor"))
+	buildings = SimBuildings.new(data.section("buildings"))
+	narrative = SimNarrative.new(data.section("narrative"))
 	season.publish(calendar, modifiers)  # tela já mostra as taxas do dia 1
+	labor.step(population.people(), population.health, modifiers)
 	_events.clear()
 	return true
 
@@ -41,6 +58,7 @@ func enqueue(command: Dictionary) -> bool:
 
 
 func step_day() -> void:
+	var first_event := _events.size()
 	# 0. Comandos
 	for command in loop.take_commands():
 		_apply_command(command)
@@ -48,12 +66,22 @@ func step_day() -> void:
 	_events.append_array(calendar.advance())
 	# 2. Season publica as taxas do dia
 	season.publish(calendar, modifiers)
-	# 3..6: Forecast, Social, Labor, Buildings — próximas etapas.
+	# 3..4: Forecast, Social — próximas etapas.
+	# 5a. Efeitos dos prédios (estação de hoje; condição e falta de água de ontem),
+	#     antes de Labor, que lê farm_mult/gather_mult
+	buildings.publish_effects(calendar.season_id(), resources.last_flow.water.deficit > 0.0, modifiers)
+	# 5. Labor publica a produção do dia (lê pessoas/saúde do fim de ontem)
+	labor.step(population.people(), population.health, modifiers)
+	# 6. Buildings: saque, desgaste, obras
+	_events.append_array(buildings.step(labor, calendar.season_id(), modifiers))
 	# 7. Resources
 	_events.append_array(resources.step(population.people(), modifiers))
 	# 8. Population (lê o déficit do dia em Resources)
 	_events.append_array(population.step(resources.last_flow, modifiers, loop.rng))
-	# 9..10: Social, Narrative — próximas etapas.
+	# 9: Social — próxima etapa.
+	# 10. Narrative: lê os eventos do dia e acrescenta diário/falas
+	_events.append_array(narrative.step(calendar.day_index, calendar.year(),
+		population.people(), _events.slice(first_event)))
 
 
 ## Avança pelo relógio de tempo real. Retorna quantos dias passaram.
@@ -85,11 +113,22 @@ func snapshot() -> Dictionary:
 		"families": population.families.size(),
 		"health": population.health,
 		"shortage_streak": population.shortage_streak,
+		"labor": labor.snapshot(),
+		"buildings": buildings.snapshot(),
 		"resources": _resources_snapshot(),
 		"modifiers": modifiers.entries(),
 		"seed": loop.seed_value,
 		"rng_state": loop.rng.state,
 	}
+
+
+## Todas as chaves que algum sistema publica ou lê.
+func _modifier_keys() -> PackedStringArray:
+	var keys := DataRegistry.SEASON_KEYS.duplicate()
+	for id in DataRegistry.RESOURCE_IDS:
+		keys.append(id + "_consumption")
+		keys.append(id + "_capacity")
+	return keys
 
 
 func _resources_snapshot() -> Dictionary:
@@ -102,6 +141,41 @@ func _resources_snapshot() -> Dictionary:
 
 
 func _apply_command(command: Dictionary) -> void:
-	# Nenhum comando de jogo existe ainda; desconhecido vira evento, não erro fatal.
-	_events.append({"type": "command_rejected", "command": command.get("type"),
-		"reason": "tipo desconhecido"})
+	match command.type:
+		"set_labor", "adjust_labor":
+			_apply_labor(command)
+		"build":
+			var id: Variant = command.get("building")
+			if not id is String or not buildings.is_buildable(id):
+				_reject(command, "prédio inválido")
+			elif not buildings.can_enqueue():
+				_reject(command, "fila de obras cheia")
+			else:
+				buildings.enqueue(id)
+				_events.append({"type": "build_queued", "building": id})
+		_:
+			_reject(command, "tipo desconhecido")
+
+
+func _apply_labor(command: Dictionary) -> void:
+	var task: Variant = command.get("task")
+	if not task is String or not DataRegistry.TASK_IDS.has(task):
+		_reject(command, "tarefa inválida")
+		return
+	var key := "value" if command.type == "set_labor" else "delta"
+	var raw: Variant = command.get(key)
+	# Inteiro de verdade: JSON/replay entregam float; 2.5, texto ou null são recusados.
+	if not (raw is int or (raw is float and raw == floorf(raw) and absf(raw) < 1e6)):
+		_reject(command, "%s precisa ser inteiro" % key)
+		return
+	var n := int(raw)
+	var value: int = n if command.type == "set_labor" else labor.desired[task] + n
+	if value < 0:
+		_reject(command, "valor negativo")
+		return
+	labor.set_desired(task, value)
+	_events.append({"type": "labor_changed", "task": task, "value": value})
+
+
+func _reject(command: Dictionary, reason: String) -> void:
+	_events.append({"type": "command_rejected", "command": command.get("type"), "reason": reason})

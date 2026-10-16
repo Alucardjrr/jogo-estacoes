@@ -8,11 +8,13 @@ const SIM_OK := {"seconds_per_day": 3.0, "speeds": [1, 2, 3],
 const CAL_OK := {"days_per_month": 30, "months_per_year": 12, "seasons": [
 	{"id": "seca", "months": 6, "severe": true},
 	{"id": "chuvas", "months": 6, "severe": true}]}
-const SEASON_OK := {"intensity_per_year": 0.15, "intensity_max": 2.0, "seasons": {
+const SEASON_OK := {"intensity_per_year": 0.15, "intensity_max": 2.0, "transition_days": 20, "seasons": {
 	"seca": {"water_inflow": 12, "water_loss_rate": 0.004, "food_inflow": 25,
-		"food_loss_rate": 0.002, "health_drift": 0, "escalation": {"water_inflow": -1}},
+		"food_loss_rate": 0.002, "health_drift": 0, "gather_mult": 0.9, "farm_mult": 0.2,
+		"escalation": {"water_inflow": -1}},
 	"chuvas": {"water_inflow": 110, "water_loss_rate": 0.0005, "food_inflow": 40,
-		"food_loss_rate": 0.008, "health_drift": -0.35, "escalation": {"health_drift": 1}}}}
+		"food_loss_rate": 0.008, "health_drift": -0.35, "gather_mult": 0.35, "farm_mult": 0.6,
+		"escalation": {"health_drift": 1}}}}
 const RES_OK := {"resources": {
 	"water": {"initial": 4500, "capacity": 6000, "per_capita_daily": 1.0},
 	"food": {"initial": 3000, "capacity": 6000, "per_capita_daily": 1.0}}}
@@ -20,6 +22,24 @@ const POP_OK := {"families": [{"id": "f01", "size": 5}, {"id": "f02", "size": 3}
 	"health_initial": 80, "health_max": 100, "health_recovery_per_day": 0.2,
 	"water_shortage_health": 8, "food_shortage_health": 3, "death_health_threshold": 40,
 	"death_rate_max": 0.004, "departure_shortage_days": 10}
+const LAB_OK := {"worker_share": 0.6, "full_productivity_health": 60, "min_productivity": 0.5,
+	"water_per_worker": 2.5, "food_per_worker": 3.5, "care_health_per_share": 10,
+	"care_health_max": 2.0, "fatigue_threshold": 0.5, "fatigue_health": 0.4,
+	"initial_allocation": {"water": 9, "farm": 18, "care": 3, "build": 0, "salvage": 0}}
+const SEASONS_2 := {"seca": 0.1, "chuvas": 0.3}
+const NAR_OK := {"hard_shortage_days": 10, "residents": 12, "diary_lines": 3,
+	"season_group": {"seca": "SECA", "chuvas": "CHUVAS"},
+	"reaction_lines": {"DEATH": 4, "FAMILY_LEFT": 4, "BUILDING_DONE": 4, "SHORTAGE_WATER": 3,
+		"SHORTAGE_FOOD": 3, "SEASON_SECA": 2, "SEASON_CHUVAS": 2}}
+const BLD_OK := {"work_points_per_worker": 1.0, "points_per_condition": 2.0,
+	"low_condition_threshold": 60, "low_condition_wear_mult": 1.5,
+	"repair_cost_mult": {"seca": 1.0, "chuvas": 1.0}, "salvage_per_worker": 1.0,
+	"salvage_fatigue": 2.0, "max_queue": 5, "types": {
+		"ruinas": {"ruins": true, "materials": 800},
+		"cisterna": {"cost_materials": 120, "cost_points": 60, "wear": SEASONS_2,
+			"effects": [{"key": "water_capacity", "add": 1500}]},
+		"silo": {"cost_materials": 100, "cost_points": 50, "wear": SEASONS_2,
+			"effects": [{"key": "food_loss_rate", "mul": 0.7, "seasons": ["chuvas"]}]}}}
 
 
 func before_each() -> void:
@@ -39,12 +59,16 @@ func _write(name: String, content: Variant) -> void:
 
 
 func _load_with(sim: Variant, cal: Variant, season: Variant = SEASON_OK,
-		res: Variant = RES_OK, pop: Variant = POP_OK) -> DataRegistry:
+		res: Variant = RES_OK, pop: Variant = POP_OK, lab: Variant = LAB_OK,
+		bld: Variant = BLD_OK, nar: Variant = NAR_OK) -> DataRegistry:
 	_write("sim.json", sim)
 	_write("calendar.json", cal)
 	_write("season.json", season)
 	_write("resources.json", res)
 	_write("population.json", pop)
+	_write("labor.json", lab)
+	_write("buildings.json", bld)
+	_write("narrative.json", nar)
 	var reg := DataRegistry.new()
 	reg.load_all(TMP_DIR)
 	return reg
@@ -270,3 +294,122 @@ func test_resources_nao_aceita_mais_populacao_provisoria() -> void:
 	var res := RES_OK.duplicate(true)
 	res["placeholder_population"] = 50
 	assert_true(_has_error(_load_with(SIM_OK, CAL_OK, SEASON_OK, res), "chave desconhecida 'placeholder_population'"))
+
+
+
+func test_transicao_maior_que_a_estacao() -> void:
+	var season := SEASON_OK.duplicate(true)
+	season.transition_days = 182  # estações de CAL_OK têm 180 dias
+	var reg := _load_with(SIM_OK, CAL_OK, season)
+	assert_true(_has_error(reg, "transition_days (182) maior que a estação mais curta (180 dias)"))
+	season.transition_days = 180
+	reg = _load_with(SIM_OK, CAL_OK, season)
+	assert_true(reg.is_loaded(), "igual à estação mais curta é aceito: %s" % [reg.errors])
+	season.transition_days = 2.5
+	assert_true(_has_error(_load_with(SIM_OK, CAL_OK, season), "transition_days: precisa ser inteiro"))
+
+
+func test_transicao_impar_recusada() -> void:
+	var season := SEASON_OK.duplicate(true)
+	season.transition_days = 5
+	assert_true(_has_error(_load_with(SIM_OK, CAL_OK, season), "transition_days (5) precisa ser par"))
+
+
+func test_transicao_limitada_pela_estacao_mais_curta_de_verdade() -> void:
+	var cal := CAL_OK.duplicate(true)
+	cal.seasons[0].months = 10
+	cal.seasons[1].months = 2  # chuvas: 60 dias
+	var season := SEASON_OK.duplicate(true)
+	season.transition_days = 62
+	assert_true(_has_error(_load_with(SIM_OK, cal, season), "maior que a estação mais curta (60 dias)"))
+	season.transition_days = 60
+	assert_true(_load_with(SIM_OK, cal, season).is_loaded())
+
+
+# --- labor.json ---
+
+func test_labor_valida_e_normaliza() -> void:
+	var reg := _load_with(SIM_OK, CAL_OK)
+	assert_true(reg.is_loaded(), "erros: %s" % [reg.errors])
+	assert_typeof(reg.section("labor").initial_allocation.farm, TYPE_INT)
+
+
+func test_labor_alocacao_invalida() -> void:
+	var lab := LAB_OK.duplicate(true)
+	lab.initial_allocation = {"water": -1, "farm": 2.5, "pesca": 3, "build": 0, "salvage": 0}
+	var reg := _load_with(SIM_OK, CAL_OK, SEASON_OK, RES_OK, POP_OK, lab)
+	assert_false(reg.is_loaded())
+	assert_true(_has_error(reg, "water: -1 fora da faixa"))
+	assert_true(_has_error(reg, "farm: precisa ser inteiro"))
+	assert_true(_has_error(reg, "chave desconhecida 'pesca'"))
+	assert_true(_has_error(reg, "falta a chave 'care'"))
+
+
+func test_labor_faixas() -> void:
+	var lab := LAB_OK.duplicate(true)
+	lab.worker_share = 1.5
+	lab.fatigue_threshold = 1.0
+	lab.full_productivity_health = 0
+	var reg := _load_with(SIM_OK, CAL_OK, SEASON_OK, RES_OK, POP_OK, lab)
+	assert_true(_has_error(reg, "worker_share = 1.5"))
+	assert_true(_has_error(reg, "fatigue_threshold = 1"))
+	assert_true(_has_error(reg, "full_productivity_health = 0"))
+
+
+# --- buildings.json ---
+
+func _bld_errors(bld: Dictionary) -> DataRegistry:
+	return _load_with(SIM_OK, CAL_OK, SEASON_OK, RES_OK, POP_OK, LAB_OK, bld)
+
+
+func test_buildings_valido() -> void:
+	var reg := _bld_errors(BLD_OK)
+	assert_true(reg.is_loaded(), "erros: %s" % [reg.errors])
+	assert_true(reg.section("buildings").types.ruinas.ruins)
+	assert_eq(reg.section("buildings").types.silo.effects[0].seasons, ["chuvas"])
+
+
+func test_buildings_desgaste_precisa_das_estacoes_do_calendario() -> void:
+	var bld := BLD_OK.duplicate(true)
+	bld.types.cisterna.wear = {"seca": 0.1, "inverno": 0.2}
+	var reg := _bld_errors(bld)
+	assert_true(_has_error(reg, "falta a chave 'chuvas'"))
+	assert_true(_has_error(reg, "chave desconhecida 'inverno'"))
+
+
+func test_buildings_efeito_invalido() -> void:
+	var bld := BLD_OK.duplicate(true)
+	bld.types.cisterna.effects = [{"key": "ouro", "add": 1}, {"key": "farm_mult"},
+		{"key": "farm_mult", "add": 1, "mul": 2}, {"key": "farm_mult", "add": 1, "seasons": ["neve"]},
+		{"key": "farm_mult", "add": 1, "extra": true}]
+	var reg := _bld_errors(bld)
+	assert_true(_has_error(reg, "key inválida 'ouro'"))
+	assert_true(_has_error(reg, "effects[1]: precisa de add ou mul"))
+	assert_true(_has_error(reg, "effects[2]: precisa de add ou mul"))
+	assert_true(_has_error(reg, "estação 'neve' não existe"))
+	assert_true(_has_error(reg, "chave desconhecida 'extra'"))
+
+
+func test_buildings_ruinas_e_custos() -> void:
+	var bld := BLD_OK.duplicate(true)
+	bld.types.ruinas["cost_points"] = 3
+	bld.types.silo.cost_points = 0
+	bld.max_queue = 0
+	var reg := _bld_errors(bld)
+	assert_true(_has_error(reg, "types.ruinas: chave desconhecida 'cost_points'"))
+	assert_true(_has_error(reg, "cost_points = 0"))
+	assert_true(_has_error(reg, "max_queue: 0 fora da faixa"))
+
+
+# --- narrative.json ---
+
+func test_narrative_grupos_e_linhas() -> void:
+	var nar := NAR_OK.duplicate(true)
+	nar.season_group = {"seca": "seca", "inverno": "INV"}
+	nar.reaction_lines.erase("DEATH")
+	var reg := _load_with(SIM_OK, CAL_OK, SEASON_OK, RES_OK, POP_OK, LAB_OK, BLD_OK, nar)
+	assert_false(reg.is_loaded())
+	assert_true(_has_error(reg, "season_group.seca inválido"))
+	assert_true(_has_error(reg, "falta a chave 'chuvas'"))
+	assert_true(_has_error(reg, "chave desconhecida 'inverno'"))
+	assert_true(_has_error(reg, "reaction_lines: falta a chave 'DEATH'"))

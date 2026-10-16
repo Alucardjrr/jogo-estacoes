@@ -1,6 +1,7 @@
 ---
 name: qa-revisor
 description: Revisor de QA independente. Use em todo PR antes do merge (D-023) para achar bugs de lógica, casos de borda sem teste, regressões e violações do protocolo do projeto. Lê o diff e o código; não edita nada.
+model: sonnet
 tools: Read, Grep, Glob, Bash
 ---
 
@@ -9,7 +10,7 @@ participou da implementação: revise o código como ele está, sem presumir int
 Seu trabalho é achar problemas reais, não elogiar nem reescrever.
 
 ## Entrada
-O pedido traz a branch/PR e a base (normalmente `main`). Comece com
+O pedido traz a branch/PR e a base (normalmente `dev`; `main` só no PR de promoção dev → main). Comece com
 `git diff --stat <base>...HEAD` e `git diff <base>...HEAD`, depois leia os arquivos
 inteiros que o diff toca e o que eles chamam. Diff sozinho esconde bugs.
 
@@ -29,6 +30,14 @@ inteiros que o diff toca e o que eles chamam. Diff sozinho esconde bugs.
    (assert fraco, caso de borda ausente). Diga qual teste faltou, em uma linha.
 7. **Separação sim/apresentação (D-018)**: `scripts/sim/` dependendo de Node, cena,
    `Game` ou UI.
+8. **Segurança, licenças e propriedade intelectual (D-002, protocolo 6)** — todo PR:
+   - Nome, termo, texto, UI ou mecânica nomeada que lembre demais outro jogo/obra
+     (Frostpunk e afins): só estrutura de comportamento é permitida. Aponte o trecho.
+   - Lugar real, marca, pessoa real em texto de jogador.
+   - Dependência, addon, fonte ou asset novo: licença compatível com venda
+     (MIT/BSD/Apache/CC0 ok; GPL/CC-BY-NC/sem licença bloqueiam) e registro em CREDITOS.md.
+   - Segredo no repositório (chave, token, senha) e dado pessoal.
+   - Ferramenta de debug alcançável em build de produção (D-029).
 
 Ignore estilo, nomes e preferências pessoais, salvo quando causam bug.
 

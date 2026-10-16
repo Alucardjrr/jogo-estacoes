@@ -11,6 +11,7 @@ extends RefCounted
 ## Estoque nunca fica negativo. Tudo em float; a tela arredonda.
 
 var _cfg: Dictionary          # id -> {initial, capacity, per_capita_daily}
+var _capacity: Dictionary = {}  # id -> teto do dia (base + <id>_capacity da pilha)
 var stock: Dictionary = {}    # id -> float
 ## Fluxo do último dia, para a tela de debug: id -> {inflow, demand, consumed,
 ## deficit, overflow, lost}.
@@ -21,11 +22,13 @@ func _init(cfg: Dictionary) -> void:
 	_cfg = cfg.resources
 	for id in DataRegistry.RESOURCE_IDS:
 		stock[id] = float(_cfg[id].initial)
+		_capacity[id] = float(_cfg[id].capacity)
 		last_flow[id] = _empty_flow()
 
 
+## Teto usado no último dia (base dos dados + prédios via <id>_capacity).
 func capacity(id: String) -> float:
-	return _cfg[id].capacity
+	return _capacity[id]
 
 
 ## Demanda diária de um recurso para `population` pessoas, já com os
@@ -41,6 +44,7 @@ func step(population: int, modifiers: ModifierStack) -> Array[Dictionary]:
 	for id in DataRegistry.RESOURCE_IDS:
 		var f := _empty_flow()
 		var s: float = stock[id]
+		_capacity[id] = maxf(modifiers.value(id + "_capacity", float(_cfg[id].capacity)), 0.0)
 		f.inflow = maxf(modifiers.value(id + "_inflow"), 0.0)
 		s += f.inflow
 		f.demand = maxf(demand(id, population, modifiers), 0.0)

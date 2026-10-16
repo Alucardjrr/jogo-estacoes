@@ -75,5 +75,23 @@ func advance() -> Array[Dictionary]:
 	return events
 
 
+## Estação de um dia qualquer (dias corridos, como day_index). Usado por Season
+## para olhar a estação vizinha na transição. day < 0 devolve {}.
+@warning_ignore("integer_division")
+func info_at(day: int) -> Dictionary:
+	if day < 0:
+		return {}
+	var day_of_year := day % days_per_year()
+	var month0 := day_of_year / days_per_month
+	var i := _season_by_month[month0]
+	return {
+		"id": _seasons[i].id,
+		"severe": _seasons[i].severe,
+		"year": day / days_per_year() + 1,
+		"day_in_season": day_of_year - _season_start_month[i] * days_per_month + 1,
+		"length": int(_seasons[i].months) * days_per_month,
+	}
+
+
 func _season_index() -> int:
 	return _season_by_month[month() - 1]

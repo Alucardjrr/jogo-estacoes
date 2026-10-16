@@ -21,7 +21,7 @@ HUD_PAUSED,Pausado,Paused
 HUD_SPEED,Velocidade {speed}×,Speed {speed}×
 HUD_PAUSE_BUTTON,Pausar,Pause
 HUD_LANGUAGE,Idioma: Português,Language: English
-HUD_HELP,Espaço: pausar · 1/2/3: velocidade · L: idioma,Space: pause · 1/2/3: speed · L: language
+HUD_HELP,Espaço: pausar · 1/2/3: velocidade · L: idioma · Q/A água · W/S roça · E/D cuidado · R/F obras · T/G saque · Z cisterna · X silo · C canteiro · V abrigo,Space: pause · 1/2/3: speed · L: language · Q/A water · W/S farming · E/D care · R/F works · T/G salvage · Z cistern · X granary · C plots · V shelter
 HUD_DATA_ERROR,Erro nos dados de balanceamento:,Balance data error:
 EVENT_SEASON_CHANGED,"Começou: {season} (Ano {year})","Started: {season} (Year {year})"
 EVENT_YEAR_CHANGED,Ano {year} começou,Year {year} began
@@ -36,3 +36,85 @@ HUD_MODIFIERS,Modificadores:,Modifiers:
 EVENT_DEATH,Uma pessoa da família {family} morreu,A member of family {family} died
 EVENT_FAMILY_LEFT,A família {family} foi embora (pessoas: {size}),Family {family} left (people: {size})
 EVENT_COLONY_EMPTY,O assentamento ficou vazio,The settlement is empty
+HUD_LABOR,"Trabalho ({workers}): Água {water} · Roça {farm} · Cuidado {care} · Obras {build} · Saque {salvage} · Livres {idle} · Produtividade {productivity}%","Work ({workers}): Water {water} · Farming {farm} · Care {care} · Works {build} · Salvage {salvage} · Free {idle} · Productivity {productivity}%"
+HUD_LABOR_INITIAL,(distribuição inicial),(starting assignment)
+HUD_DAYS_LEFT,dura {days} dias,lasts {days} days
+HUD_STABLE,estável,stable
+HUD_BUILDINGS,Prédios:,Buildings:
+HUD_BUILDING,"{name} ×{count} ({condition}% → {end}% sem reparo)","{name} ×{count} ({condition}% → {end}% unrepaired)"
+HUD_MATERIALS,Materiais {materials} · Ruínas {ruins}/{ruins_total},Materials {materials} · Ruins {ruins}/{ruins_total}
+HUD_QUEUE_WORKING,"Obra: {name} {progress}/{cost} (fila: {queued})","Building: {name} {progress}/{cost} (queue: {queued})"
+HUD_QUEUE_WAITING,"Obra: {name} esperando {materials} materiais (fila: {queued})","Building: {name} waiting for {materials} materials (queue: {queued})"
+BUILDING_CISTERNA,Cisterna,Cistern
+BUILDING_SILO,Silo,Granary
+BUILDING_CANTEIRO,Canteiro irrigado,Irrigated plots
+BUILDING_ABRIGO,Abrigo com drenagem,Drained shelter
+BUILDING_RUINAS,Ruínas,Ruins
+SETTLEMENT_NAME,Aroeira Alta,Aroeira Alta
+RESIDENT_01,Odete,Odete
+RESIDENT_02,Anselmo,Anselmo
+RESIDENT_03,Maíra,Maíra
+RESIDENT_04,Tobias,Tobias
+RESIDENT_05,Lúcia,Lúcia
+RESIDENT_06,Benício,Benício
+RESIDENT_07,Clarice,Clarice
+RESIDENT_08,Jonas,Jonas
+RESIDENT_09,Dalva,Dalva
+RESIDENT_10,Ítalo,Ítalo
+RESIDENT_11,Rosália,Rosália
+RESIDENT_12,Gaspar,Gaspar
+REACT_DEATH_2,"{name}: Enterramos perto da aroeira, para a sombra fazer companhia.","{name}: We buried them near the old tree, so the shade keeps them company."
+REACT_DEATH_3,"{name}: Não vamos esquecer o nome dessa pessoa, nem a falta que faz.","{name}: We will not forget that name, nor the gap it leaves."
+REACT_DEATH_4,"{name}: Dói, mas amanhã tem água para buscar e a gente vai.","{name}: It hurts, but tomorrow there is water to fetch and we will go."
+REACT_FAMILY_LEFT_1,"{name}: Foram embora de madrugada, sem despedida, e a porta ficou encostada.","{name}: They left before dawn without goodbyes, and the door was left ajar."
+REACT_FAMILY_LEFT_2,"{name}: Não os culpo, a fome não pede licença.","{name}: I do not blame them, hunger does not ask permission."
+REACT_FAMILY_LEFT_3,"{name}: Se acharem chão melhor, que mandem notícia.","{name}: If they find better ground, may they send word."
+REACT_FAMILY_LEFT_4,"{name}: Uma casa a menos acesa, mas o fogo das outras ainda aquece.","{name}: One house less lit, but the other fires still keep us warm."
+REACT_BUILDING_DONE_1,{name}: {building} de pé! Ainda cheira a barro fresco.,{name}: {building} is standing! It still smells of fresh clay.
+REACT_BUILDING_DONE_2,"{name}: Terminamos {building}, e nenhuma mão ficou sobrando.","{name}: {building} is done, and not one hand was spare."
+REACT_BUILDING_DONE_3,"{name}: Agora temos {building}, um motivo a mais para aguentar o ano.","{name}: Now we have {building}, one more reason to hold on through the year."
+REACT_BUILDING_DONE_4,"{name}: Quem diria, {building} pronto com sucata e teimosia.","{name}: Who would have thought, {building} finished with scrap and stubbornness."
+REACT_SHORTAGE_WATER_1,"{name}: O balde voltou leve, e a sede já está dentro de casa.","{name}: The bucket came back light, and thirst is already inside the house."
+REACT_SHORTAGE_WATER_2,"{name}: Cada gole agora tem dono, e ninguém reclama em voz alta.","{name}: Every sip now has an owner, and no one complains out loud."
+REACT_SHORTAGE_WATER_3,"{name}: Se a água não vier logo, vamos ter de escolher quem bebe primeiro.","{name}: If the water does not come soon, we will have to choose who drinks first."
+REACT_SHORTAGE_FOOD_1,"{name}: A panela está rala, mas ainda é de todos.","{name}: The pot is thin, but it still belongs to everyone."
+REACT_SHORTAGE_FOOD_2,"{name}: Já tem criança dormindo de barriga vazia, e isso a gente não aceita.","{name}: Children are going to bed hungry, and that we will not accept."
+REACT_SHORTAGE_FOOD_3,"{name}: Se faltar mais, as famílias vão partir, e não vou saber o que dizer.","{name}: If we run any shorter, families will leave, and I will not know what to say."
+REACT_SEASON_SECA_1,"{name}: A seca chegou, o céu fechou o azul e a terra rachou.","{name}: The dry season is here, the sky shut its blue and the earth split."
+REACT_SEASON_SECA_2,"{name}: Hora de guardar cada gota, e de lembrar que seca também passa.","{name}: Time to keep every drop, and to remember that droughts pass too."
+REACT_SEASON_CHUVAS_1,"{name}: Cheiro de terra molhada, mas olho no rio e no telhado.","{name}: Smell of wet earth, but keep an eye on the river and the roof."
+REACT_SEASON_CHUVAS_2,"{name}: A chuva veio, e agora é cuidar para que ela não nos leve junto.","{name}: The rain has come, and now we make sure it does not carry us off with it."
+REACT_SEASON_JANELA_1,"{name}: O tempo deu uma trégua, vamos aproveitar cada dia dela.","{name}: The weather has given us a truce, let us use every day of it."
+REACT_SEASON_JANELA_2,"{name}: Respiramos fundo, e é hora de plantar e consertar.","{name}: We breathe deep, and now it is time to plant and mend."
+HUD_DIARY,Diário:,Journal:
+DIARY_SECA_DEATH_1,A seca do Ano {year} nos custou {deaths} dos nossos. Somos {population} e seguimos cavando.,The Year {year} drought cost us {deaths} of our own. We are {population} and we keep digging.
+DIARY_SECA_DEATH_2,"Fim da seca do Ano {year}: perdemos {deaths} dos nossos para a sede. A aroeira ficou de pé, e nós também.","End of the Year {year} drought: we lost {deaths} of our own to thirst. The old tree stayed standing, and so did we."
+DIARY_SECA_LEFT_1,"Na seca do Ano {year} ninguém morreu, mas algumas famílias seguiram caminho. Famílias que partiram: {left}.","In the Year {year} drought no one died, but some families went their own way. Families who left: {left}."
+DIARY_SECA_LEFT_2,"Seca do Ano {year}: as portas ficaram encostadas, caso voltem. Famílias que partiram: {left}. Somos {population}.",Year {year} drought: we left the doors ajar in case they return. Families who left: {left}. We are {population}.
+DIARY_SECA_SHORT_1,"A seca do Ano {year} foi de balde raso e panela rala, mas ninguém se perdeu. Somos {population}.","The Year {year} drought meant shallow buckets and thin pots, but no one was lost. We are {population}."
+DIARY_SECA_SHORT_2,Passamos a seca do Ano {year} com muitos dias de falta e todos ainda juntos. Somos {population}.,We got through the Year {year} drought with many days of want and everyone still together. We are {population}.
+DIARY_SECA_BUILT_1,Seca do Ano {year} sem perdas. Obras concluídas: {built}. Somos {population}.,Year {year} drought with no losses. Works completed: {built}. We are {population}.
+DIARY_SECA_BUILT_2,Mesmo na seca do Ano {year} deu para terminar obra. Obras concluídas: {built}. Ninguém ficou pelo caminho.,Even in the Year {year} drought we managed to finish work. Works completed: {built}. No one fell by the wayside.
+DIARY_SECA_CALM_1,"A seca do Ano {year} apertou, mas passou sem perdas. Somos {population} e a terra ainda responde.",The Year {year} drought squeezed us but passed without loss. We are {population} and the land still answers.
+DIARY_SECA_CALM_2,Fim da seca do Ano {year}: o açude secou e a gente não. Somos {population}.,End of the Year {year} drought: the pond ran dry and we did not. We are {population}.
+DIARY_JANELA_DEATH_1,"Na janela do Ano {year} perdemos {deaths} dos nossos. Enterramos e voltamos ao trabalho, somos {population}.",In the Year {year} window we lost {deaths} of our own. We buried them and went back to work; we are {population}.
+DIARY_JANELA_DEATH_2,A janela do Ano {year} foi branda no tempo e dura no resto: perdemos {deaths} dos nossos.,The Year {year} window was gentle in weather and hard in everything else: we lost {deaths} of our own.
+DIARY_JANELA_LEFT_1,"Na janela do Ano {year} ninguém morreu, mas algumas casas ficaram vazias. Famílias que partiram: {left}.","In the Year {year} window no one died, but some houses were left empty. Families who left: {left}."
+DIARY_JANELA_LEFT_2,Janela do Ano {year}: o tempo estava manso e mesmo assim houve quem partisse. Famílias que partiram: {left}. Seguimos em {population}.,"Year {year} window: the weather was gentle and still some left. Families who left: {left}. We carry on, {population} strong."
+DIARY_JANELA_SHORT_1,"A janela do Ano {year} teve muitos dias de falta, mas ninguém se perdeu. Somos {population} e racionamos com a cara firme.","The Year {year} window had many days of want, but no one was lost. We are {population} and we ration with a steady face."
+DIARY_JANELA_SHORT_2,"No Ano {year} o tempo estava brando, mas a despensa e o balde não. Somos {population}, todos juntos.","In Year {year} the weather was mild but the pantry and the bucket were not. We are {population}, all together."
+DIARY_JANELA_BUILT_1,"A janela do Ano {year} deu fôlego, sem perdas. Obras concluídas: {built}. Somos {population}.","The Year {year} window gave us room to breathe, with no losses. Works completed: {built}. We are {population}."
+DIARY_JANELA_BUILT_2,Tempo manso no Ano {year} e obra feita. Obras concluídas: {built}. Sobrou um dia para sentar debaixo da aroeira.,A gentle spell in Year {year} and work done. Works completed: {built}. We had a day left to sit under the old tree.
+DIARY_JANELA_CALM_1,A janela do Ano {year} passou sem perdas. Somos {population} e as crianças correram pelo terreiro.,The Year {year} window passed without loss. We are {population} and the children ran through the yard.
+DIARY_JANELA_CALM_2,"Tempo manso no Ano {year}: plantamos, remendamos e dormimos sem sobressalto. Somos {population}.","A gentle spell in Year {year}: we planted, we patched, we slept without a start. We are {population}."
+DIARY_CHUVAS_DEATH_1,"As chuvas do Ano {year} levaram {deaths} dos nossos, entre a enchente e a febre da água. Somos {population}.","The Year {year} rains took {deaths} of our own, between the flood and the water fever. We are {population}."
+DIARY_CHUVAS_DEATH_2,Chuvas do Ano {year}: perdemos {deaths} dos nossos. Lavamos o que deu e o primeiro broto já aparece no barro.,Year {year} rains: we lost {deaths} of our own. We washed what we could and the first sprout is already showing in the clay.
+DIARY_CHUVAS_LEFT_1,"Nas chuvas do Ano {year} ninguém morreu, mas algumas famílias se despediram. Famílias que partiram: {left}.","In the Year {year} rains no one died, but some families said goodbye. Families who left: {left}."
+DIARY_CHUVAS_LEFT_2,Chuvas do Ano {year}: quem ficou refez os telhados. Famílias que partiram: {left}. Somos {population}.,Year {year} rains: those who stayed rebuilt the roofs. Families who left: {left}. We are {population}.
+DIARY_CHUVAS_SHORT_1,"As chuvas do Ano {year} vieram, mas a comida e a água limpa faltaram por muitos dias. Ninguém se perdeu, e somos {population}.","The Year {year} rains came, but food and clean water ran short for many days. No one was lost, and we are {population}."
+DIARY_CHUVAS_SHORT_2,"Choveu muito no Ano {year} e ainda assim passamos falta. Somos {population}, e a panela continua de todos.","It rained hard in Year {year} and we still went without. We are {population}, and the pot still belongs to everyone."
+DIARY_CHUVAS_BUILT_1,"Chuvas do Ano {year} sem perdas. Obras concluídas: {built}. A água ficou do lado de fora, e somos {population}.","Year {year} rains with no losses. Works completed: {built}. The water stayed outside, and we are {population}."
+DIARY_CHUVAS_BUILT_2,O rio subiu no Ano {year} e voltou ao leito. Obras concluídas: {built}. Tudo aguentou firme.,The river rose in Year {year} and went back to its bed. Works completed: {built}. Everything held firm.
+DIARY_CHUVAS_CALM_1,As chuvas do Ano {year} vieram bravas e passaram sem perdas. Somos {population}.,The Year {year} rains came fierce and passed without loss. We are {population}.
+DIARY_CHUVAS_CALM_2,"Atravessamos as chuvas do Ano {year} sem perder ninguém. Chovia sobre a lama, e a gente sorria.","We crossed the Year {year} rains without losing anyone. It rained on the mud, and we smiled."
+REACT_DEATH_1,{name}: Cada um de nós carrega um pouco de quem se foi.,{name}: Each of us carries a little of the one we lost.

@@ -12,7 +12,7 @@ const DEFAULT_DIR := "res://data/balance"
 const RESOURCE_IDS: PackedStringArray = ["water", "food"]
 ## Grandezas que Season publica por estação (uma por recurso e tipo).
 const SEASON_KEYS: PackedStringArray = [
-	"water_inflow", "water_loss_rate", "food_inflow", "food_loss_rate"]
+	"water_inflow", "water_loss_rate", "food_inflow", "food_loss_rate", "health_drift"]
 
 var errors: PackedStringArray = []
 
@@ -28,6 +28,7 @@ func load_all(dir: String = DEFAULT_DIR) -> bool:
 		"calendar": _load_json(dir.path_join("calendar.json")),
 		"season": _load_json(dir.path_join("season.json")),
 		"resources": _load_json(dir.path_join("resources.json")),
+		"population": _load_json(dir.path_join("population.json")),
 	}
 	var parsed := {}
 	if loaded.sim is Dictionary:
@@ -43,6 +44,8 @@ func load_all(dir: String = DEFAULT_DIR) -> bool:
 			parsed.calendar if calendar_ok else {})
 	if loaded.resources is Dictionary:
 		parsed.resources = _parse_resources(loaded.resources, "resources.json")
+	if loaded.population is Dictionary:
+		parsed.population = _parse_population(loaded.population, "population.json")
 	if not errors.is_empty():
 		return false
 	_data = parsed
@@ -54,7 +57,7 @@ func is_loaded() -> bool:
 
 
 ## Dados já normalizados (ints como int) de um sistema: "sim", "calendar",
-## "season" ou "resources".
+## "season", "resources" ou "population".
 func section(name: String) -> Dictionary:
 	return _data.get(name, {})
 
@@ -165,6 +168,7 @@ func _parse_season(d: Dictionary, src: String, calendar: Dictionary) -> Dictiona
 			"water_loss_rate": _float(s, "water_loss_rate", where, 0.0, 1.0),
 			"food_inflow": _float(s, "food_inflow", where, 0.0, 100000.0),
 			"food_loss_rate": _float(s, "food_loss_rate", where, 0.0, 1.0),
+			"health_drift": _float(s, "health_drift", where, -10.0, 10.0),
 			"escalation": {},
 		}
 		if s.has("escalation"):
@@ -192,11 +196,8 @@ func _parse_season(d: Dictionary, src: String, calendar: Dictionary) -> Dictiona
 
 
 func _parse_resources(d: Dictionary, src: String) -> Dictionary:
-	_check_keys(d, ["placeholder_population", "resources"], src)
-	var out := {
-		"placeholder_population": _int(d, "placeholder_population", src, 0, 100000),
-		"resources": {},
-	}
+	_check_keys(d, ["resources"], src)
+	var out := {"resources": {}}
 	if not d.has("resources"):
 		return out
 	if not d.resources is Dictionary:
@@ -222,6 +223,46 @@ func _parse_resources(d: Dictionary, src: String) -> Dictionary:
 			errors.append("%s: initial (%s) maior que capacity (%s)" % [
 				where, entry.initial, entry.capacity])
 		out.resources[id] = entry
+	return out
+
+
+func _parse_population(d: Dictionary, src: String) -> Dictionary:
+	_check_keys(d, ["families", "health_initial", "health_max", "health_recovery_per_day",
+		"water_shortage_health", "food_shortage_health", "death_health_threshold",
+		"death_rate_max", "departure_shortage_days"], src)
+	var out := {
+		"families": [],
+		"health_initial": _float(d, "health_initial", src, 0.0, 1000.0),
+		"health_max": _float(d, "health_max", src, 1.0, 1000.0),
+		"health_recovery_per_day": _float(d, "health_recovery_per_day", src, 0.0, 100.0),
+		"water_shortage_health": _float(d, "water_shortage_health", src, 0.0, 100.0),
+		"food_shortage_health": _float(d, "food_shortage_health", src, 0.0, 100.0),
+		"death_health_threshold": _float(d, "death_health_threshold", src, 0.0, 1000.0),
+		"death_rate_max": _float(d, "death_rate_max", src, 0.0, 1.0),
+		"departure_shortage_days": _int(d, "departure_shortage_days", src, 1, 1000),
+	}
+	if d.has("health_initial") and d.has("health_max") and out.health_initial > out.health_max:
+		errors.append("%s: health_initial (%s) maior que health_max (%s)" % [
+			src, out.health_initial, out.health_max])
+	if d.has("death_health_threshold") and d.has("health_max") \
+			and out.death_health_threshold > out.health_max:
+		errors.append("%s: death_health_threshold maior que health_max" % src)
+	var families := _array(d, "families", src)
+	if families.is_empty() and d.has("families"):
+		errors.append("%s: families não pode ser vazio" % src)
+	var ids := {}
+	for i in families.size():
+		var where := "%s: families[%d]" % [src, i]
+		if not families[i] is Dictionary:
+			errors.append("%s: precisa ser um objeto {}" % where)
+			continue
+		var f: Dictionary = families[i]
+		_check_keys(f, ["id", "size"], where)
+		var id := _id(f, "id", where)
+		if ids.has(id):
+			errors.append("%s: id repetido '%s'" % [where, id])
+		ids[id] = true
+		out.families.append({"id": id, "size": _int(f, "size", where, 1, 50)})
 	return out
 
 

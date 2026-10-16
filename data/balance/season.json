@@ -7,13 +7,19 @@
       "water_loss_rate": 0.004,
       "food_inflow": 25,
       "food_loss_rate": 0.002,
-      "escalation": { "water_inflow": -1, "water_loss_rate": 1, "food_inflow": -1 }
+      "health_drift": 0,
+      "escalation": {
+        "water_inflow": -1,
+        "water_loss_rate": 1,
+        "food_inflow": -1
+      }
     },
     "janela_1": {
       "water_inflow": 55,
       "water_loss_rate": 0.002,
       "food_inflow": 70,
       "food_loss_rate": 0.003,
+      "health_drift": 0,
       "escalation": {}
     },
     "chuvas": {
@@ -21,13 +27,19 @@
       "water_loss_rate": 0.0005,
       "food_inflow": 40,
       "food_loss_rate": 0.008,
-      "escalation": { "water_inflow": 1, "food_loss_rate": 1 }
+      "health_drift": -0.35,
+      "escalation": {
+        "water_inflow": 1,
+        "food_loss_rate": 1,
+        "health_drift": 1
+      }
     },
     "janela_2": {
       "water_inflow": 55,
       "water_loss_rate": 0.002,
       "food_inflow": 70,
       "food_loss_rate": 0.003,
+      "health_drift": 0,
       "escalation": {}
     }
   }

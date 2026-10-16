@@ -145,7 +145,9 @@ func test_virada_de_estacao_usa_taxas_da_nova_estacao_no_mesmo_dia() -> void:
 func test_snapshot_de_recursos_e_modificadores() -> void:
 	var sim := _new_sim()
 	var s := sim.snapshot()
-	assert_eq(s.population, sim.data.section("resources").placeholder_population)
+	assert_eq(s.population, 50)
+	assert_eq(s.families, 12)
+	assert_eq(s.health, 80.0)
 	assert_eq(s.resources.water.stock, 4500.0)
 	assert_eq(s.resources.water.capacity, 6000.0)
 	assert_eq(s.modifiers.size(), DataRegistry.SEASON_KEYS.size(), "taxas do dia 1 já publicadas")
@@ -167,3 +169,51 @@ func test_setup_reinicia_recursos() -> void:
 	assert_true(sim.setup(7))
 	assert_eq(sim.resources.stock.water, 4500.0)
 	assert_eq(sim.modifiers.entries().size(), DataRegistry.SEASON_KEYS.size())
+
+
+# --- Population com os dados do projeto ---
+
+func test_ano_2_sem_jogador_familias_vao_embora_na_seca() -> void:
+	var sim := _new_sim()
+	_run(sim, 359)
+	assert_eq(sim.snapshot().population, 50, "ano 1 sem perdas")
+	sim.drain_events()
+	_run(sim, 90)
+	var left := sim.drain_events().filter(func(e: Dictionary) -> bool: return e.type == "family_left")
+	assert_gt(left.size(), 0)
+	assert_lt(sim.snapshot().population, 50)
+	assert_lt(sim.snapshot().health, 80.0)
+
+
+func test_chuvas_derrubam_a_saude() -> void:
+	var sim := _new_sim()
+	_run(sim, 180)  # fim da janela_1: saúde no teto
+	var before: float = sim.snapshot().health
+	_run(sim, 90)  # chuvas
+	assert_lt(sim.snapshot().health, before)
+
+
+func test_falta_de_agua_mata() -> void:
+	var sim := _new_sim()
+	sim.resources.stock.water = 0.0
+	_run(sim, 60)
+	var deaths := sim.drain_events().filter(func(e: Dictionary) -> bool: return e.type == "death")
+	assert_gt(deaths.size(), 0)
+
+
+func test_consumo_acompanha_a_populacao() -> void:
+	var sim := _new_sim()
+	sim.population.families.pop_back()  # 3 pessoas a menos
+	_run(sim, 1)
+	assert_eq(sim.snapshot().resources.food.demand, 47.0)
+
+
+func test_populacao_deterministica() -> void:
+	var a := _new_sim(11)
+	var b := _new_sim(11)
+	a.resources.stock.water = 0.0
+	b.resources.stock.water = 0.0
+	_run(a, 400)
+	_run(b, 400)
+	assert_eq(a.population.families, b.population.families)
+	assert_eq(a.drain_events(), b.drain_events())

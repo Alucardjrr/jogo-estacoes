@@ -1,0 +1,24 @@
+{
+  "families": [
+    { "id": "f01", "size": 5 },
+    { "id": "f02", "size": 4 },
+    { "id": "f03", "size": 4 },
+    { "id": "f04", "size": 3 },
+    { "id": "f05", "size": 6 },
+    { "id": "f06", "size": 4 },
+    { "id": "f07", "size": 5 },
+    { "id": "f08", "size": 3 },
+    { "id": "f09", "size": 4 },
+    { "id": "f10", "size": 5 },
+    { "id": "f11", "size": 4 },
+    { "id": "f12", "size": 3 }
+  ],
+  "health_initial": 80,
+  "health_max": 100,
+  "health_recovery_per_day": 0.2,
+  "water_shortage_health": 8,
+  "food_shortage_health": 3,
+  "death_health_threshold": 40,
+  "death_rate_max": 0.004,
+  "departure_shortage_days": 10
+}

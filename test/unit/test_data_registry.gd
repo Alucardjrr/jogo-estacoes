@@ -10,12 +10,16 @@ const CAL_OK := {"days_per_month": 30, "months_per_year": 12, "seasons": [
 	{"id": "chuvas", "months": 6, "severe": true}]}
 const SEASON_OK := {"intensity_per_year": 0.15, "intensity_max": 2.0, "seasons": {
 	"seca": {"water_inflow": 12, "water_loss_rate": 0.004, "food_inflow": 25,
-		"food_loss_rate": 0.002, "escalation": {"water_inflow": -1}},
+		"food_loss_rate": 0.002, "health_drift": 0, "escalation": {"water_inflow": -1}},
 	"chuvas": {"water_inflow": 110, "water_loss_rate": 0.0005, "food_inflow": 40,
-		"food_loss_rate": 0.008, "escalation": {}}}}
-const RES_OK := {"placeholder_population": 50, "resources": {
+		"food_loss_rate": 0.008, "health_drift": -0.35, "escalation": {"health_drift": 1}}}}
+const RES_OK := {"resources": {
 	"water": {"initial": 4500, "capacity": 6000, "per_capita_daily": 1.0},
 	"food": {"initial": 3000, "capacity": 6000, "per_capita_daily": 1.0}}}
+const POP_OK := {"families": [{"id": "f01", "size": 5}, {"id": "f02", "size": 3}],
+	"health_initial": 80, "health_max": 100, "health_recovery_per_day": 0.2,
+	"water_shortage_health": 8, "food_shortage_health": 3, "death_health_threshold": 40,
+	"death_rate_max": 0.004, "departure_shortage_days": 10}
 
 
 func before_each() -> void:
@@ -35,11 +39,12 @@ func _write(name: String, content: Variant) -> void:
 
 
 func _load_with(sim: Variant, cal: Variant, season: Variant = SEASON_OK,
-		res: Variant = RES_OK) -> DataRegistry:
+		res: Variant = RES_OK, pop: Variant = POP_OK) -> DataRegistry:
 	_write("sim.json", sim)
 	_write("calendar.json", cal)
 	_write("season.json", season)
 	_write("resources.json", res)
+	_write("population.json", pop)
 	var reg := DataRegistry.new()
 	reg.load_all(TMP_DIR)
 	return reg
@@ -56,6 +61,7 @@ func test_dados_reais_do_projeto_carregam() -> void:
 	var reg := DataRegistry.new()
 	assert_true(reg.load_all(), "erros: %s" % [reg.errors])
 	assert_eq(reg.section("calendar").seasons.size(), 4)
+	assert_eq(reg.section("population").families.size(), 12)
 	assert_eq(reg.section("season").seasons.size(), 4)
 	assert_eq(reg.section("resources").resources.keys(), Array(DataRegistry.RESOURCE_IDS))
 	assert_typeof(reg.section("sim").max_days_per_frame, TYPE_INT)
@@ -150,7 +156,8 @@ func test_season_valida_e_normaliza() -> void:
 	var reg := _load_with(SIM_OK, CAL_OK)
 	assert_true(reg.is_loaded(), "erros: %s" % [reg.errors])
 	assert_eq(reg.section("season").seasons.seca.escalation, {"water_inflow": -1.0})
-	assert_eq(reg.section("season").seasons.chuvas.escalation, {})
+	assert_eq(reg.section("season").seasons.chuvas.escalation, {"health_drift": 1.0})
+	assert_eq(reg.section("season").seasons.chuvas.health_drift, -0.35)
 
 
 func test_season_precisa_bater_com_o_calendario() -> void:
@@ -206,11 +213,9 @@ func test_resources_inicial_acima_da_capacidade() -> void:
 
 func test_resources_valores_invalidos() -> void:
 	var res := RES_OK.duplicate(true)
-	res.placeholder_population = 2.5
 	res.resources.food.capacity = 0
 	res.resources.water = "muita"
 	var reg := _load_with(SIM_OK, CAL_OK, SEASON_OK, res)
-	assert_true(_has_error(reg, "placeholder_population: precisa ser inteiro"))
 	assert_true(_has_error(reg, "capacity = 0"))
 	assert_true(_has_error(reg, "resources.water: precisa ser um objeto"))
 
@@ -221,3 +226,47 @@ func test_calendario_invalido_nao_gera_ruido_na_checagem_cruzada() -> void:
 	var reg := _load_with(SIM_OK, cal)
 	assert_true(_has_error(reg, "id inválido"))
 	assert_false(_has_error(reg, "season.json"), "erros: %s" % [reg.errors])
+
+
+# --- population.json ---
+
+func test_population_valida_e_normaliza() -> void:
+	var reg := _load_with(SIM_OK, CAL_OK)
+	assert_true(reg.is_loaded(), "erros: %s" % [reg.errors])
+	assert_typeof(reg.section("population").families[0].size, TYPE_INT)
+	assert_typeof(reg.section("population").departure_shortage_days, TYPE_INT)
+
+
+func test_population_familias_invalidas() -> void:
+	var pop := POP_OK.duplicate(true)
+	pop.families = [{"id": "f01", "size": 5}, {"id": "f01", "size": 0},
+		{"id": "Família X", "size": 2}, "f04", {"id": "f05", "size": 2, "nome": "x"}]
+	var reg := _load_with(SIM_OK, CAL_OK, SEASON_OK, RES_OK, pop)
+	assert_false(reg.is_loaded())
+	assert_true(_has_error(reg, "id repetido 'f01'"))
+	assert_true(_has_error(reg, "families[1]: size: 0 fora da faixa"))
+	assert_true(_has_error(reg, "families[2]: id inválido"))
+	assert_true(_has_error(reg, "families[3]: precisa ser um objeto"))
+	assert_true(_has_error(reg, "chave desconhecida 'nome'"))
+	pop.families = []
+	assert_true(_has_error(_load_with(SIM_OK, CAL_OK, SEASON_OK, RES_OK, pop), "families não pode ser vazio"))
+
+
+func test_population_faixas_e_coerencia() -> void:
+	var pop := POP_OK.duplicate(true)
+	pop.health_initial = 120
+	pop.death_rate_max = 2
+	pop.departure_shortage_days = 0
+	var reg := _load_with(SIM_OK, CAL_OK, SEASON_OK, RES_OK, pop)
+	assert_true(_has_error(reg, "health_initial (120"))
+	assert_true(_has_error(reg, "death_rate_max = 2"))
+	assert_true(_has_error(reg, "departure_shortage_days: 0 fora da faixa"))
+	pop = POP_OK.duplicate(true)
+	pop.death_health_threshold = 150
+	assert_true(_has_error(_load_with(SIM_OK, CAL_OK, SEASON_OK, RES_OK, pop), "death_health_threshold maior"))
+
+
+func test_resources_nao_aceita_mais_populacao_provisoria() -> void:
+	var res := RES_OK.duplicate(true)
+	res["placeholder_population"] = 50
+	assert_true(_has_error(_load_with(SIM_OK, CAL_OK, SEASON_OK, res), "chave desconhecida 'placeholder_population'"))

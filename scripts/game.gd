@@ -8,6 +8,8 @@ signal speed_changed(paused: bool, speed: int)
 
 var sim := Simulation.new()
 var settings := GameSettings.new()
+## Caminho das preferências; os testes trocam para não mexer no arquivo real.
+var settings_path := GameSettings.PATH
 var ready_ok := false
 var paused := true
 var speed_index := 0
@@ -15,6 +17,9 @@ var speed_index := 0
 
 func _ready() -> void:
 	_apply_settings()
+	for arg in OS.get_cmdline_user_args():
+		if arg.begins_with("--locale="):  # só nesta execução, não salva
+			_set_locale(arg.trim_prefix("--locale="), false)
 	ready_ok = sim.setup()
 	if not ready_ok:
 		for e in sim.data.errors:
@@ -22,9 +27,7 @@ func _ready() -> void:
 		return
 	# Playtest/captura: `godot --path . -- --speed=3` começa rodando nessa velocidade.
 	for arg in OS.get_cmdline_user_args():
-		if arg.begins_with("--locale="):  # só nesta execução, não salva
-			_set_locale(arg.trim_prefix("--locale="), false)
-		elif arg.begins_with("--speed="):
+		if arg.begins_with("--speed="):
 			var i := speeds().find(arg.trim_prefix("--speed=").to_int())
 			if i >= 0:
 				set_speed_index(i)
@@ -68,18 +71,20 @@ func cycle_locale() -> void:
 
 
 func _apply_settings() -> void:
-	settings.load_from()
+	settings.load_from(settings_path)
 	for w in settings.warnings:
 		push_warning("[settings] " + w)
 	TranslationServer.set_locale(settings.resolve_locale(OS.get_locale()))
 
 
-func _set_locale(locale: String, persist: bool) -> void:
+## Retorna false se o idioma não é suportado (nada muda).
+func _set_locale(locale: String, persist: bool) -> bool:
 	if not GameSettings.SUPPORTED_LOCALES.has(locale):
 		push_warning("[settings] idioma não suportado: " + locale)
-		return
+		return false
 	TranslationServer.set_locale(locale)
 	if persist:
 		settings.locale = locale
-		if not settings.save_to():
-			push_warning("[settings] não foi possível salvar " + GameSettings.PATH)
+		if not settings.save_to(settings_path):
+			push_warning("[settings] não foi possível salvar " + settings_path)
+	return true

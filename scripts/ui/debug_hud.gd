@@ -61,7 +61,12 @@ func _notification(what: int) -> void:
 
 
 func _unhandled_input(event: InputEvent) -> void:
-	if not Game.ready_ok or not event is InputEventKey or not event.pressed or event.echo:
+	if not event is InputEventKey or not event.pressed or event.echo:
+		return
+	if event.keycode == KEY_L:
+		Game.cycle_locale()
+		return
+	if not Game.ready_ok:
 		return
 	match event.keycode:
 		KEY_SPACE:
@@ -71,8 +76,6 @@ func _unhandled_input(event: InputEvent) -> void:
 				Game.set_paused(true)
 		KEY_1, KEY_2, KEY_3:
 			Game.set_speed_index(event.keycode - KEY_1)
-		KEY_L:
-			Game.cycle_locale()
 
 
 func _refresh_all() -> void:
@@ -82,7 +85,8 @@ func _refresh_all() -> void:
 	if not Game.ready_ok:
 		_date_label.text = tr("HUD_DATA_ERROR")
 		_season_label.text = "\n".join(Game.sim.data.errors)
-		_buttons.visible = false
+		for b in _buttons.get_children():
+			b.visible = b == _locale_button  # só o idioma continua disponível
 		return
 	_refresh(Game.sim.snapshot())
 	_on_speed_changed()

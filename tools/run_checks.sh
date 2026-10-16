@@ -15,6 +15,9 @@ status=0
 step() { echo; echo "=== $* ==="; }
 
 step "1/4 Import"
+# Num checkout limpo o 1º import reclama dos .translation (gerados por ele mesmo,
+# ignorados no git). Por isso importa duas vezes e só o 2º log conta.
+timeout 600 "$GODOT" --headless --import --path . >"$LOGS/import_1.log" 2>&1
 timeout 600 "$GODOT" --headless --import --path . >"$LOGS/import.log" 2>&1
 if grep -E "$ERRORS" "$LOGS/import.log"; then
 	echo "FALHOU: erros no import (ver $LOGS/import.log)"; status=1

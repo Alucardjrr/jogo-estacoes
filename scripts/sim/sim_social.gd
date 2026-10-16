@@ -60,11 +60,14 @@ func check(id: String, season_id: String, year: int, water_frac: float) -> Strin
 		return "wrong_season"
 	if m.unlock_water_below > 0.0 and water_frac >= m.unlock_water_below:
 		return "locked"
-	_roll_season(season_id, year)
-	if _enacted_this_season.has(id):
+	# Só leitura: se a (estação, ano) mudou, nada foi ativado nela ainda.
+	var enacted: Array[String] = []
+	if _season_key == _key(season_id, year):
+		enacted = _enacted_this_season
+	if enacted.has(id):
 		return "already_enacted"
 	if _cfg.one_per_season and not m.exempt_one_per_season:
-		for other in _enacted_this_season:
+		for other in enacted:
 			if not _cfg.measures[other].exempt_one_per_season:
 				return "one_per_season"
 	return ""
@@ -88,6 +91,24 @@ func enact(id: String, season_id: String, year: int) -> Dictionary:
 		active.append({"id": id, "season": season_id, "year": year})
 	return {"type": "measure_enacted", "measure": id, "trust_cost": c.trust,
 		"cohesion_cost": c.cohesion}
+
+
+## Parâmetros para a descrição da medida na tela (D-024: texto no CSV, números do dado).
+## Chave = chave do efeito (ex.: "water_consumption"); depois: "after_<chave>",
+## "after_days"; água na hora: "water_days". "<chave>__mul" marca multiplicador.
+func describe(id: String) -> Dictionary:
+	var m: Dictionary = _cfg.measures[id]
+	var out := {"after_days": m.after_days, "water_days": m.instant_water_days,
+		"unlock_pct": m.unlock_water_below * 100.0}
+	for e in m.effects:
+		out[e.key] = e.get("mul", e.get("add"))
+		if e.has("mul"):
+			out[e.key + "__mul"] = true
+	for e in m.after_effects:
+		out["after_" + e.key] = e.get("mul", e.get("add"))
+		if e.has("mul"):
+			out["after_" + e.key + "__mul"] = true
+	return out
 
 
 func instant_water(id: String, people: int) -> float:
@@ -170,8 +191,12 @@ func _apply(effects: Array, modifiers: ModifierStack) -> void:
 			modifiers.add(e.key, SOURCE, e.add)
 
 
+static func _key(season_id: String, year: int) -> String:
+	return "%s/%d" % [season_id, year]
+
+
 func _roll_season(season_id: String, year: int) -> void:
-	var key := "%s/%d" % [season_id, year]
+	var key := _key(season_id, year)
 	if key != _season_key:
 		_season_key = key
 		_enacted_this_season.clear()

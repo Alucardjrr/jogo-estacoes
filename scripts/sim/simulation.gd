@@ -63,11 +63,18 @@ func enqueue(command: Dictionary) -> bool:
 
 func step_day() -> void:
 	var first_event := _events.size()
-	# 0. Comandos
+	# 0. Comandos (medidas sociais ficam para depois da virada do calendário, para
+	#    valerem na estação do dia que está sendo simulado — QA PR #15)
+	var social_commands: Array[Dictionary] = []
 	for command in loop.take_commands():
-		_apply_command(command)
+		if command.type == "enact_measure":
+			social_commands.append(command)
+		else:
+			_apply_command(command)
 	# 1. Calendar (virada de estação/ano)
 	_events.append_array(calendar.advance())
+	for command in social_commands:
+		_apply_measure(command)
 	# 2. Season publica as taxas do dia
 	season.publish(calendar, modifiers)
 	# 3: Forecast — próxima etapa.
@@ -157,8 +164,6 @@ func _apply_command(command: Dictionary) -> void:
 	match command.type:
 		"set_labor", "adjust_labor":
 			_apply_labor(command)
-		"enact_measure":
-			_apply_measure(command)
 		"build":
 			var id: Variant = command.get("building")
 			if not id is String or not buildings.is_buildable(id):

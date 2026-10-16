@@ -308,7 +308,7 @@ func social_text(s: Dictionary) -> String:
 		shown += 1
 		var c := sim.social.cost(id)
 		var line := tr("HUD_MEASURE").format({"key": i + 4, "name": tr("MEASURE_" + id.to_upper()),
-			"desc": tr("MEASURE_" + id.to_upper() + "_DESC"), "trust": roundi(c.trust),
+			"desc": measure_desc(id), "trust": roundi(c.trust),
 			"cohesion": roundi(c.cohesion)})
 		if soc.active.has(id):
 			line += " " + tr("HUD_MEASURE_ACTIVE")
@@ -321,6 +321,22 @@ func social_text(s: Dictionary) -> String:
 	if shown == 0:
 		text += "\n" + tr("HUD_MEASURE_NONE")
 	return text
+
+
+## Descrição com os números de social.json (sinal explícito em somas; vírgula em pt).
+func measure_desc(id: String) -> String:
+	var params := {}
+	var raw: Dictionary = Game.sim.social.describe(id)
+	for k in raw:
+		if k.ends_with("__mul"):
+			continue
+		var v: float = raw[k]
+		var plain: bool = raw.has(k + "__mul") or k in ["after_days", "water_days", "unlock_pct"]
+		var t := _num(v) if plain else signed(v)
+		if TranslationServer.get_locale().begins_with("pt"):
+			t = t.replace(".", ",")
+		params[k] = t
+	return tr("MEASURE_" + id.to_upper() + "_DESC").format(params)
 
 
 ## Por que a obra parada não anda e o que fazer.

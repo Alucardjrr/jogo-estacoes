@@ -438,13 +438,15 @@ func test_social_valido() -> void:
 func test_social_medida_invalida() -> void:
 	var soc := SOC_OK.duplicate(true)
 	soc.measures["x"] = {"seasons": ["neve"], "trust_cost": 200, "cohesion_cost": 0,
-		"effects": [{"key": "ouro", "add": 1}], "after_days": 5, "foo": 1}
+		"effects": [{"key": "ouro", "add": 1}, {"key": "farm_mult", "add": 1, "seasons": ["seca"]}],
+		"after_days": 5, "foo": 1}
 	var reg := _soc(soc)
 	assert_true(_has_error(reg, "estação 'neve'"))
 	assert_true(_has_error(reg, "trust_cost = 200"))
 	assert_true(_has_error(reg, "key inválida 'ouro'"))
 	assert_true(_has_error(reg, "after_days sem after_effects"))
 	assert_true(_has_error(reg, "chave desconhecida 'foo'"))
+	assert_true(_has_error(reg, "effects[1]: chave desconhecida 'seasons'"), "efeito de medida não filtra estação")
 
 
 func test_social_curva_e_medida_sem_fala() -> void:

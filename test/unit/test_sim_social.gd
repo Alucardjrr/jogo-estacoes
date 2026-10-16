@@ -179,3 +179,52 @@ func test_confianca_baixa_reduz_a_producao() -> void:
 	sim2.social.trust = 0.0
 	sim2.step_day()
 	assert_lt(sim2.snapshot().resources.water.inflow, full)
+
+
+
+func test_medida_no_ultimo_dia_vale_na_estacao_nova() -> void:
+	# QA PR #15: pedida no último dia da seca, vale como medida das janela (recusada lá).
+	var sim := _sim()
+	sim.calendar.day_index = 89  # último dia da seca
+	sim.enqueue({"type": "enact_measure", "measure": "agua_na_roca"})
+	sim.step_day()
+	assert_eq(sim.calendar.season_id(), "janela_1")
+	var ev := sim.drain_events()
+	assert_eq(ev.filter(func(e: Dictionary) -> bool: return e.type == "command_rejected")[0].reason, "wrong_season")
+	assert_eq(sim.social.after, [], "nada de efeito 'depois' sem a medida")
+	assert_eq(sim.social.cohesion, sim.data.section("social").cohesion_initial + 0.05, "sem custo")
+
+
+func test_medida_no_primeiro_dia_vale_o_dia_inteiro() -> void:
+	var sim := _sim()
+	sim.calendar.day_index = 179  # vira chuvas no próximo passo
+	sim.enqueue({"type": "enact_measure", "measure": "quarentena"})
+	sim.step_day()
+	assert_true(sim.social.is_active("quarentena"))
+	assert_eq(sim.calendar.season_id(), "chuvas")
+
+
+func test_check_nao_muda_estado() -> void:
+	var s := SimSocial.new(CFG)
+	s.enact("a", "seca", 1)
+	var before := s.snapshot()
+	s.check("b", "chuvas", 1, 0.5)
+	s.check("b", "seca", 2, 0.5)
+	assert_eq(s.snapshot(), before)
+	assert_eq(s.check("b", "seca", 1, 0.5), "one_per_season")
+
+
+func test_descricao_tem_todos_os_numeros() -> void:
+	var sim := _sim()
+	var marker := RegEx.create_from_string("\\{([a-z_]+)\\}")
+	var csv := FileAccess.open("res://data/text/ui.csv", FileAccess.READ)
+	var rows := {}
+	while not csv.eof_reached():
+		var line := csv.get_csv_line()
+		if line.size() >= 3:
+			rows[line[0]] = [line[1], line[2]]
+	for id in sim.social.measure_ids():
+		var params := sim.social.describe(id)
+		for text in rows["MEASURE_%s_DESC" % id.to_upper()]:
+			for m in marker.search_all(text):
+				assert_true(params.has(m.get_string(1)), "%s: {%s} sem valor em social.json" % [id, m.get_string(1)])

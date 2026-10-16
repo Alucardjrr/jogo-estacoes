@@ -486,7 +486,7 @@ func _effects(list: Array, where: String, allowed_keys: PackedStringArray, seaso
 			continue
 		var e: Dictionary = list[i]
 		for k in e.keys():
-			if not k in ["key", "add", "mul", "seasons"]:
+			if not k in ["key", "add", "mul"]:  # medidas não filtram por estação no efeito
 				errors.append("%s: chave desconhecida '%s'" % [ew, k])
 		if e.has("add") == e.has("mul"):
 			errors.append("%s: precisa de add ou mul (um dos dois)" % ew)

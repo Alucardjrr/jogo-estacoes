@@ -147,11 +147,11 @@ MEASURE_AGUA_NA_ROCA,Rega de socorro,Rescue watering
 MEASURE_QUARENTENA,Isolamento da casa,House isolation
 MEASURE_MUTIRAO,Mutirão,Work drive
 MEASURE_CONFISCO,Requisição da cisterna,Cistern requisition
-MEASURE_RACIONAMENTO_DESC,"água bebida ×0,6; saúde −0,25/dia","drinking water ×0.6; health −0.25/day"
-MEASURE_AGUA_NA_ROCA_DESC,"roça +0,3; gasta 10 de água/dia; depois: febre da água parada (saúde −0,2/dia por 30 dias)","farming +0.3; uses 10 water/day; then: standing-water fever (health −0.2/day for 30 days)"
-MEASURE_QUARENTENA_DESC,"saúde +0,5/dia; produtividade ×0,8","health +0.5/day; productivity ×0.8"
-MEASURE_MUTIRAO_DESC,"obras ×2; saúde −0,3/dia; depois: produtividade ×0,85 por 30 dias","works ×2; health −0.3/day; then: productivity ×0.85 for 30 days"
-MEASURE_CONFISCO_DESC,água na hora (12 dias de consumo); custo permanente,water now (12 days of use); permanent cost
+MEASURE_RACIONAMENTO_DESC,"água bebida ×{water_consumption}; saúde {health_drift}/dia","drinking water ×{water_consumption}; health {health_drift}/day"
+MEASURE_AGUA_NA_ROCA_DESC,"roça {farm_mult}; consumo de água {water_consumption}/dia; depois: febre da água parada (saúde {after_health_drift}/dia por {after_days} dias)","farming {farm_mult}; water use {water_consumption}/day; then: standing-water fever (health {after_health_drift}/day for {after_days} days)"
+MEASURE_QUARENTENA_DESC,"saúde {health_drift}/dia; produtividade ×{productivity_mult}","health {health_drift}/day; productivity ×{productivity_mult}"
+MEASURE_MUTIRAO_DESC,"obras ×{build_mult} e saque ×{salvage_mult}; saúde {health_drift}/dia; depois: produtividade ×{after_productivity_mult} por {after_days} dias","works ×{build_mult} and salvage ×{salvage_mult}; health {health_drift}/day; then: productivity ×{after_productivity_mult} for {after_days} days"
+MEASURE_CONFISCO_DESC,"água na hora ({water_days} dias de consumo); custo permanente","water now ({water_days} days of use); permanent cost"
 METER_TRUST,Fé na liderança,Faith in leadership
 METER_COHESION,Vizinhança,Neighborliness
 HUD_SOCIAL,"{trust_name} {trust}/{trust_cap} · {cohesion_name} {cohesion}/{cohesion_cap} · Mágoa acumulada {grudge}","{trust_name} {trust}/{trust_cap} · {cohesion_name} {cohesion}/{cohesion_cap} · Accumulated grievance {grudge}"

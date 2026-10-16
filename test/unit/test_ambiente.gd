@@ -50,7 +50,7 @@ func test_log_mostra_diario_e_falas_traduzidos() -> void:
 	var hud: Control = preload("res://scenes/debug/debug_hud.tscn").instantiate()
 	add_child_autofree(hud)
 	var events: Array[Dictionary] = [
-		{"type": "diary", "season": "seca", "key": "DIARY_SECA_HARD_1",
+		{"type": "diary", "season": "seca", "key": "DIARY_SECA_DEATH_1",
 			"params": {"year": 1, "population": 40, "deaths": 2, "left": 1, "built": 0}},
 		{"type": "speech", "key": "REACT_BUILDING_DONE_1", "resident": "RESIDENT_06", "building": "silo"}]
 	hud._on_day_passed(Game.sim.snapshot(), events)

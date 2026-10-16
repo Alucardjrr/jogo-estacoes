@@ -71,10 +71,16 @@ func test_chaves_dinamicas_dos_dados_existem() -> void:
 	for i in nar.residents:
 		assert_true(_rows.has("RESIDENT_%02d" % (i + 1)), "falta RESIDENT_%02d" % (i + 1))
 	for grp in nar.season_group.values():
-		for mood in ["CALM", "HARD"]:
+		for mood in SimNarrative.MOODS:
 			for i in nar.diary_lines:
 				var k := "DIARY_%s_%s_%d" % [grp, mood, i + 1]
 				assert_true(_rows.has(k), "falta " + k)
+				if not _rows.has(k):
+					continue
+				# QA PR #11: só os contadores que a causa garante (nada de "perdemos 0")
+				for ph in _placeholders(_rows[k][0]):
+					assert_true(SimNarrative.MOOD_PARAMS[mood].has(ph.trim_prefix("{").trim_suffix("}")),
+						"%s usa %s, que não cabe na causa %s" % [k, ph, mood])
 	for line in nar.reaction_lines:
 		for i in nar.reaction_lines[line]:
 			var k := "REACT_%s_%d" % [line, i + 1]

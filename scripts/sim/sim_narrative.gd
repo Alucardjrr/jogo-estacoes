@@ -4,7 +4,8 @@ extends RefCounted
 ## eventos do dia e devolve eventos de texto — a tela só traduz.
 ##   - "diary": ao virar a estação, uma entrada sobre a estação que acabou
 ##     ({year}, {population}, {deaths}, {left} = famílias que partiram, {built}).
-##     HARD se houve morte, partida ou ≥ hard_shortage_days dias de falta; senão CALM.
+##     Causa (a mais grave): DEATH > LEFT > SHORT (≥ hard_shortage_days dias de falta)
+##     > BUILT (obra pronta) > CALM. Cada causa só usa os contadores que aconteceram.
 ##   - "speech": no máximo uma fala por dia, de um morador nomeado, reagindo ao
 ##     evento mais importante (morte > partida > obra pronta > início de falta > estação).
 ## Escolha de linha e de morador é determinística pelo dia (sem usar o RNG da
@@ -71,15 +72,30 @@ func step(day: int, year: int, population: int, events: Array[Dictionary]) -> Ar
 	return out
 
 
+const MOODS: PackedStringArray = ["DEATH", "LEFT", "SHORT", "BUILT", "CALM"]
+## Marcadores que cada causa pode usar (teste garante que os textos respeitam).
+const MOOD_PARAMS := {"DEATH": ["year", "population", "deaths"], "LEFT": ["year", "population", "left"],
+	"SHORT": ["year", "population"], "BUILT": ["year", "population", "built"],
+	"CALM": ["year", "population"]}
+
+
 func _year_turned(events: Array[Dictionary]) -> bool:
 	return events.any(func(e: Dictionary) -> bool: return e.type == "year_changed")
 
 
 func _diary(season_id: String, year: int, day: int, population: int) -> Dictionary:
 	var group: String = _cfg.season_group.get(season_id, "")
-	var hard := _deaths > 0 or _left > 0 or _shortage_days >= int(_cfg.hard_shortage_days)
-	var ev := {"type": "diary", "season": season_id,
-		"key": "DIARY_%s_%s_%d" % [group, "HARD" if hard else "CALM", _pick(day, 3, int(_cfg.diary_lines)) + 1],
+	var mood := "CALM"
+	if _deaths > 0:
+		mood = "DEATH"
+	elif _left > 0:
+		mood = "LEFT"
+	elif _shortage_days >= int(_cfg.hard_shortage_days):
+		mood = "SHORT"
+	elif _built > 0:
+		mood = "BUILT"
+	var ev := {"type": "diary", "season": season_id, "mood": mood,
+		"key": "DIARY_%s_%s_%d" % [group, mood, _pick(day, 3, int(_cfg.diary_lines)) + 1],
 		"params": {"year": year, "population": population, "deaths": _deaths, "left": _left,
 			"built": _built}}
 	_deaths = 0

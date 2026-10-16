@@ -63,25 +63,6 @@ RESIDENT_09,Dalva,Dalva
 RESIDENT_10,Ítalo,Ítalo
 RESIDENT_11,Rosália,Rosália
 RESIDENT_12,Gaspar,Gaspar
-DIARY_SECA_CALM_1,"Fim da seca de {year}: o açude secou e a gente não. Somos {population}, todos de pé.","End of the {year} dry season: the pond ran dry and we did not. We are {population}, every one still standing."
-DIARY_SECA_CALM_2,"A seca de {year} apertou, mas ninguém ficou pelo caminho. A aroeira perdeu folha e segurou o tronco, como nós.","The {year} drought squeezed us, but nobody was lost along the way. The old tree dropped its leaves and held its trunk, just like us."
-DIARY_SECA_CALM_3,Passamos a seca de {year} contando cada balde. Somos {population} e a terra ainda tem o que dar.,"We got through the {year} drought counting every bucket. We are {population}, and the land still has something to give."
-DIARY_SECA_HARD_1,A seca de {year} cobrou caro: perdemos {deaths} dos nossos. Quem ficou cavou fundo e continua.,The {year} drought took its price: we lost {deaths} of our own. Those who stayed dug deep and keep going.
-DIARY_SECA_HARD_2,"Seca de {year}: famílias que partiram, {left}. A casa vazia fica aberta, caso queiram voltar.","Drought of {year}: families who left, {left}. The empty houses stay unlocked in case they come back."
-DIARY_SECA_HARD_3,"O fim da seca de {year} foi de sede e de silêncio. Somos {population}, e ainda acendemos o fogo toda noite.","The {year} drought ended in thirst and silence. We are {population}, and we still light the fire every night."
-DIARY_JANELA_CALM_1,"A janela de {year} deu fôlego: plantamos, remendamos e dormimos sem sobressalto. Somos {population}.","The {year} window gave us room to breathe: we planted, we patched, we slept without a start. We are {population}."
-DIARY_JANELA_CALM_2,Tempo manso em {year}. Levantamos {built} e sobrou um dia para sentar debaixo da aroeira.,A gentle spell in {year}. We raised {built} and had a day left to sit under the old tree.
-DIARY_JANELA_CALM_3,"Janela de {year} sem perdas. As crianças correram pelo terreiro, e isso também conta como colheita.","The {year} window passed without losses. The children ran through the yard, and that counts as a harvest too."
-DIARY_JANELA_HARD_1,Mesmo na janela de {year} houve perdas: {deaths} dos nossos não viram a próxima estação. Enterramos e voltamos ao trabalho.,Even in the {year} window we lost people: {deaths} of ours will not see the next season. We buried them and went back to work.
-DIARY_JANELA_HARD_2,A janela de {year} foi curta demais para o que faltava. Famílias que partiram: {left}.,The {year} window was too short for what we lacked. Families who left: {left}.
-DIARY_JANELA_HARD_3,"Em {year} o tempo estava brando, mas a despensa não. Somos {population} e racionamos com a cara firme.",In {year} the weather was mild but the pantry was not. We are {population} and we ration with a steady face.
-DIARY_CHUVAS_CALM_1,"As chuvas de {year} vieram bravas e passaram. A água suja ficou do lado de fora, e somos {population}.","The {year} rains came fierce and went. The dirty water stayed outside, and we are {population}."
-DIARY_CHUVAS_CALM_2,"Chuvas de {year}: o rio subiu e voltou ao leito, e ninguém ficou doente. O que construímos ({built}) aguentou.","Rains of {year}: the river rose and went back to its bed, and no one fell sick. What we built ({built}) held."
-DIARY_CHUVAS_CALM_3,"Atravessamos as chuvas de {year} sem perder ninguém. Chovia sobre a lama, e a gente sorria.","We crossed the {year} rains without losing anyone. It rained on the mud, and we smiled."
-DIARY_CHUVAS_HARD_1,"As chuvas de {year} levaram {deaths} dos nossos, entre a enchente e a febre da água. Lavamos o que deu e seguimos.","The {year} rains took {deaths} of ours, between the flood and the water fever. We washed what we could and carried on."
-DIARY_CHUVAS_HARD_2,Chuvas de {year}: a água entrou nas casas e as famílias que partiram foram {left}. Quem ficou refez o telhado.,Rains of {year}: water got into the houses and the families who left numbered {left}. Those who stayed rebuilt the roofs.
-DIARY_CHUVAS_HARD_3,"A enchente de {year} deixou lama, febre e luto. Somos {population}, e o primeiro broto já apareceu no barro.","The {year} flood left mud, fever and grief. We are {population}, and the first sprout has already appeared in the clay."
-REACT_DEATH_1,{name}: Cuidou de todos até o fim. A gente cuida dele agora.,{name}: Looked after everyone to the end. Now we look after them.
 REACT_DEATH_2,"{name}: Enterramos perto da aroeira, para a sombra fazer companhia.","{name}: We buried them near the old tree, so the shade keeps them company."
 REACT_DEATH_3,"{name}: Não vamos esquecer o nome dessa pessoa, nem a falta que faz.","{name}: We will not forget that name, nor the gap it leaves."
 REACT_DEATH_4,"{name}: Dói, mas amanhã tem água para buscar e a gente vai.","{name}: It hurts, but tomorrow there is water to fetch and we will go."
@@ -106,3 +87,34 @@ REACT_SEASON_CHUVAS_2,"{name}: A chuva veio, e agora é cuidar para que ela não
 REACT_SEASON_JANELA_1,"{name}: O tempo deu uma trégua, vamos aproveitar cada dia dela.","{name}: The weather has given us a truce, let us use every day of it."
 REACT_SEASON_JANELA_2,"{name}: Respiramos fundo, e é hora de plantar e consertar.","{name}: We breathe deep, and now it is time to plant and mend."
 HUD_DIARY,Diário:,Journal:
+DIARY_SECA_DEATH_1,A seca de {year} nos custou {deaths} dos nossos. Somos {population} e seguimos cavando.,The {year} drought cost us {deaths} of our own. We are {population} and we keep digging.
+DIARY_SECA_DEATH_2,"Fim da seca de {year}: perdemos {deaths} dos nossos para a sede. A aroeira ficou de pé, e nós também.","End of the {year} drought: we lost {deaths} of ours to thirst. The old tree stayed standing, and so did we."
+DIARY_SECA_LEFT_1,"Na seca de {year} nenhum de nós morreu, mas famílias partiram atrás de comida: {left}. Somos {population}.","In the {year} drought none of us died, but families left in search of food: {left}. We are {population}."
+DIARY_SECA_LEFT_2,"Seca de {year}: partiram famílias, e o número é {left}. As portas ficaram encostadas, caso voltem.","Drought of {year}: families left, and the number is {left}. The doors were left ajar in case they return."
+DIARY_SECA_SHORT_1,"A seca de {year} foi de balde raso e panela rala, mas ninguém se perdeu. Somos {population}.","The {year} drought meant shallow buckets and thin pots, but no one was lost. We are {population}."
+DIARY_SECA_SHORT_2,Passamos a seca de {year} com muitos dias de falta e todos ainda juntos. Somos {population}.,We got through the {year} drought with many days of shortage and everyone still together. We are {population}.
+DIARY_SECA_BUILT_1,"Seca de {year} sem perdas, e as obras concluídas foram {built}. Somos {population}.","Drought of {year} with no losses, and the works completed numbered {built}. We are {population}."
+DIARY_SECA_BUILT_2,Mesmo na seca de {year} deu para terminar obra: {built}. Ninguém ficou pelo caminho.,Even in the {year} drought we managed to finish work: {built}. No one fell by the wayside.
+DIARY_SECA_CALM_1,"A seca de {year} apertou, mas passou sem perdas. Somos {population} e a terra ainda responde.",The {year} drought squeezed us but passed without loss. We are {population} and the land still answers.
+DIARY_SECA_CALM_2,Fim da seca de {year}: o açude secou e a gente não. Somos {population}.,End of the {year} drought: the pond ran dry and we did not. We are {population}.
+DIARY_JANELA_DEATH_1,"Na janela de {year} perdemos {deaths} dos nossos. Enterramos e voltamos ao trabalho, somos {population}.",In the {year} window we lost {deaths} of ours. We buried them and went back to work; we are {population}.
+DIARY_JANELA_DEATH_2,A janela de {year} foi branda no tempo e dura no resto: perdemos {deaths} dos nossos.,The {year} window was gentle in weather and hard in everything else: we lost {deaths} of ours.
+DIARY_JANELA_LEFT_1,"Na janela de {year} ninguém morreu, mas famílias partiram: {left}. Somos {population}.","In the {year} window no one died, but families left: {left}. We are {population}."
+DIARY_JANELA_LEFT_2,"Janela de {year}: o tempo estava manso e mesmo assim partiram famílias, {left} delas. Seguimos em {population}.","Window of {year}: the weather was gentle and still families left, {left} of them. We carry on, {population} strong."
+DIARY_JANELA_SHORT_1,"A janela de {year} teve muitos dias de falta, mas ninguém se perdeu. Somos {population} e racionamos com a cara firme.","The {year} window had many days of shortage, but no one was lost. We are {population} and we ration with a steady face."
+DIARY_JANELA_SHORT_2,"Em {year} o tempo estava brando, mas a despensa e o balde não. Somos {population}, todos juntos.","In {year} the weather was mild but the pantry and the bucket were not. We are {population}, all together."
+DIARY_JANELA_BUILT_1,"A janela de {year} deu fôlego, sem perdas, e as obras concluídas foram {built}. Somos {population}.","The {year} window gave us room to breathe, with no losses, and the works completed numbered {built}. We are {population}."
+DIARY_JANELA_BUILT_2,Tempo manso em {year} e obra feita: {built}. Sobrou um dia para sentar debaixo da aroeira.,A gentle spell in {year} and work done: {built}. We had a day left to sit under the old tree.
+DIARY_JANELA_CALM_1,A janela de {year} passou sem perdas. Somos {population} e as crianças correram pelo terreiro.,The {year} window passed without loss. We are {population} and the children ran through the yard.
+DIARY_JANELA_CALM_2,"Tempo manso em {year}: plantamos, remendamos e dormimos sem sobressalto. Somos {population}.","A gentle spell in {year}: we planted, we patched, we slept without a start. We are {population}."
+DIARY_CHUVAS_DEATH_1,"As chuvas de {year} levaram {deaths} dos nossos, entre a enchente e a febre da água. Somos {population}.","The {year} rains took {deaths} of ours, between the flood and the water fever. We are {population}."
+DIARY_CHUVAS_DEATH_2,Chuvas de {year}: perdemos {deaths} dos nossos. Lavamos o que deu e o primeiro broto já aparece no barro.,Rains of {year}: we lost {deaths} of ours. We washed what we could and the first sprout is already showing in the clay.
+DIARY_CHUVAS_LEFT_1,"Nas chuvas de {year} ninguém morreu, mas a água entrou e famílias partiram: {left}. Somos {population}.","In the {year} rains no one died, but the water got in and families left: {left}. We are {population}."
+DIARY_CHUVAS_LEFT_2,"Chuvas de {year}: partiram famílias, {left} no total. Quem ficou refez os telhados.","Rains of {year}: families left, {left} in all. Those who stayed rebuilt the roofs."
+DIARY_CHUVAS_SHORT_1,"As chuvas de {year} vieram, mas a comida e a água limpa faltaram por muitos dias. Ninguém se perdeu, e somos {population}.","The {year} rains came, but food and clean water ran short for many days. No one was lost, and we are {population}."
+DIARY_CHUVAS_SHORT_2,"Choveu muito em {year} e ainda assim passamos falta. Somos {population}, e a panela continua de todos.","It rained hard in {year} and we still went without. We are {population}, and the pot still belongs to everyone."
+DIARY_CHUVAS_BUILT_1,"Chuvas de {year} sem perdas, e as obras concluídas foram {built}. A água ficou do lado de fora, e somos {population}.","Rains of {year} with no losses, and the works completed numbered {built}. The water stayed outside, and we are {population}."
+DIARY_CHUVAS_BUILT_2,"O rio subiu em {year} e voltou ao leito. O que terminamos, {built}, aguentou firme.","The river rose in {year} and went back to its bed. What we finished, {built}, held firm."
+DIARY_CHUVAS_CALM_1,As chuvas de {year} vieram bravas e passaram sem perdas. Somos {population}.,The {year} rains came fierce and passed without loss. We are {population}.
+DIARY_CHUVAS_CALM_2,"Atravessamos as chuvas de {year} sem perder ninguém. Chovia sobre a lama, e a gente sorria.","We crossed the {year} rains without losing anyone. It rained on the mud, and we smiled."
+REACT_DEATH_1,"{name}: Cuidou de todos até o fim, e agora a gente cuida de quem ficou.","{name}: They looked after everyone to the end, and now we look after those who remain."

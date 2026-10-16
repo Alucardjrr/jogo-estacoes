@@ -23,6 +23,7 @@ func test_diario_calmo_sem_perdas() -> void:
 	var out := n.step(90, 1, 50, _ev([{"type": "season_changed", "from": "seca", "to": "janela_1", "year": 1}]))
 	assert_eq(out[0].type, "diary")
 	assert_true(out[0].key.begins_with("DIARY_SECA_CALM_"))
+	assert_eq(out[0].mood, "CALM")
 	assert_eq(out[0].params, {"year": 1, "population": 50, "deaths": 0, "left": 0, "built": 0})
 
 
@@ -32,7 +33,7 @@ func test_diario_duro_conta_a_estacao_e_zera() -> void:
 	n.step(11, 1, 45, _ev([{"type": "family_left", "family": "f02", "size": 4}]))
 	n.step(12, 1, 45, _ev([{"type": "building_completed", "building": "silo"}]))
 	var out := n.step(90, 1, 45, _ev([{"type": "season_changed", "from": "seca", "to": "janela_1", "year": 1}]))
-	assert_true(out[0].key.begins_with("DIARY_SECA_HARD_"))
+	assert_true(out[0].key.begins_with("DIARY_SECA_DEATH_"), "morte é a causa mais grave")
 	assert_eq([out[0].params.deaths, out[0].params.left, out[0].params.built], [1, 1, 1])
 	out = n.step(180, 1, 45, _ev([{"type": "season_changed", "from": "janela_1", "to": "chuvas", "year": 1}]))
 	assert_true(out[0].key.begins_with("DIARY_JANELA_CALM_"), "zerou ao virar")
@@ -43,7 +44,7 @@ func test_dias_de_falta_tornam_a_estacao_dura() -> void:
 	for d in 3:
 		n.step(d, 1, 50, _ev([{"type": "shortage", "resource": "water", "deficit": 1.0}]))
 	var out := n.step(90, 1, 50, _ev([{"type": "season_changed", "from": "seca", "to": "janela_1", "year": 1}]))
-	assert_true(out[0].key.begins_with("DIARY_SECA_HARD_"))
+	assert_eq(out[0].mood, "SHORT")
 
 
 func test_diario_da_virada_de_ano_usa_o_ano_que_acabou() -> void:
@@ -113,3 +114,38 @@ func test_diario_em_cada_virada_na_simulacao() -> void:
 			if e.type == "diary":
 				diaries += 1
 	assert_eq(diaries, 4)
+
+
+func test_causa_de_cada_diario() -> void:
+	var cases := [
+		[[{"type": "family_left", "family": "f", "size": 3}], "LEFT"],
+		[[{"type": "building_completed", "building": "silo"}], "BUILT"],
+		[[], "CALM"],
+	]
+	for c in cases:
+		var n := SimNarrative.new(CFG)
+		n.step(5, 1, 50, _ev(c[0]))
+		var out := n.step(90, 1, 50, _ev([{"type": "season_changed", "from": "seca", "to": "janela_1", "year": 1}]))
+		assert_eq(out[0].mood, c[1])
+
+
+func test_diario_da_virada_de_ano_na_simulacao() -> void:
+	var sim := Simulation.new()
+	sim.setup(1)
+	var years := []
+	for _d in 361:
+		sim.step_day()
+		for e in sim.drain_events():
+			if e.type == "diary":
+				years.append(e.params.year)
+	assert_eq(years, [1, 1, 1, 1], "a janela_2 do ano 1 fecha com ano 1")
+
+
+func test_calendario_de_uma_estacao() -> void:
+	var cfg := CFG.duplicate(true)
+	cfg.season_group = {"seca": "SECA"}
+	var n := SimNarrative.new(cfg)
+	var out := n.step(360, 2, 50, _ev([{"type": "year_changed", "year": 2},
+		{"type": "season_changed", "from": "seca", "to": "seca", "year": 2}]))
+	assert_eq(out[0].params.year, 1)
+	assert_true(out[0].key.begins_with("DIARY_SECA_"))

@@ -10,7 +10,7 @@ participou da implementação: revise o código como ele está, sem presumir int
 Seu trabalho é achar problemas reais, não elogiar nem reescrever.
 
 ## Entrada
-O pedido traz a branch/PR e a base (normalmente `main`). Comece com
+O pedido traz a branch/PR e a base (normalmente `dev`; `main` só no PR de promoção dev → main). Comece com
 `git diff --stat <base>...HEAD` e `git diff <base>...HEAD`, depois leia os arquivos
 inteiros que o diff toca e o que eles chamam. Diff sozinho esconde bugs.
 

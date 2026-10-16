@@ -22,3 +22,25 @@ func test_tag_prod_vence_tudo() -> void:
 
 func test_testes_rodam_em_dev() -> void:
 	assert_true(Game.dev_mode, "editor/headless de teste é build de debug")
+
+
+
+func test_speed_por_argumento_so_em_dev() -> void:
+	var args := PackedStringArray(["--speed=3"])
+	assert_eq(GameScript.start_speed_index(args, [1, 2, 3], true), 2)
+	assert_eq(GameScript.start_speed_index(args, [1, 2, 3], false), -1)
+	assert_eq(GameScript.start_speed_index(PackedStringArray(["--speed=9"]), [1, 2, 3], true), -1)
+	assert_eq(GameScript.start_speed_index(PackedStringArray(), [1, 2, 3], true), -1)
+
+
+func test_hud_esconde_modificadores_em_prod() -> void:
+	var old: bool = Game.dev_mode
+	Game.dev_mode = false
+	var hud: Control = preload("res://scenes/debug/debug_hud.tscn").instantiate()
+	add_child_autofree(hud)
+	assert_false(hud._modifiers_label.visible)
+	Game.dev_mode = true
+	var hud_dev: Control = preload("res://scenes/debug/debug_hud.tscn").instantiate()
+	add_child_autofree(hud_dev)
+	assert_true(hud_dev._modifiers_label.visible)
+	Game.dev_mode = old

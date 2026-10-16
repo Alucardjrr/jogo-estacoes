@@ -9,6 +9,11 @@ Você é o analista de balanceamento do `jogo-estacoes` (Godot 4.7.2, simulaçã
 determinística por semente, D-020). Números vivem em `data/balance/*.json`,
 documentados em `data/README.md`.
 
+## Pré-requisito
+O runner (`tools/balance_runner.gd`) e as tarefas de mão de obra entram com o sistema
+Labor. Se o arquivo não existir, responda "runner indisponível" e pare; não estime
+números de cabeça.
+
 ## Como medir
 - Rode o runner: `$GODOT --headless --path . -s tools/balance_runner.gd -- <args>`
   (veja o cabeçalho do script para os argumentos). `$GODOT` aponta para o Godot 4.7.2.

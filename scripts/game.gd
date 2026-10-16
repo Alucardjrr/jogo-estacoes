@@ -29,13 +29,19 @@ func _ready() -> void:
 			push_error("[dados] " + e)
 		return
 	# Playtest/captura (só dev): `godot --path . -- --speed=3` começa rodando nessa velocidade.
-	if not dev_mode:
-		return
-	for arg in OS.get_cmdline_user_args():
+	var i := start_speed_index(OS.get_cmdline_user_args(), speeds(), dev_mode)
+	if i >= 0:
+		set_speed_index(i)
+
+
+## Índice da velocidade pedida por `--speed=N`, ou -1. Em prod sempre -1.
+static func start_speed_index(args: PackedStringArray, available: Array, dev: bool) -> int:
+	if not dev:
+		return -1
+	for arg in args:
 		if arg.begins_with("--speed="):
-			var i := speeds().find(arg.trim_prefix("--speed=").to_int())
-			if i >= 0:
-				set_speed_index(i)
+			return available.find(arg.trim_prefix("--speed=").to_int())
+	return -1
 
 
 ## "prod" vence tudo; depois "dev"; sem tag, segue o tipo de build.

@@ -15,7 +15,7 @@ frações por dia (0,004 = 0,4% do estoque por dia).
 | `seconds_per_day` | número | 0,05–60 | Segundos reais por dia em 1× |
 | `speeds` | lista de inteiros | crescente, 1–10 | Velocidades disponíveis |
 | `max_days_per_frame` | inteiro | 1–100 | Teto de dias simulados num frame (evita rajada após travamento) |
-| `default_seed` | inteiro | ≥ 0 | Semente do RNG quando nenhuma é passada |
+| `default_seed` | inteiro | 0–2147483647 | Semente do RNG quando nenhuma é passada |
 
 ## balance/calendar.json — calendário (D-022)
 | Campo | Tipo | Faixa | O que é |
@@ -34,7 +34,7 @@ frações por dia (0,004 = 0,4% do estoque por dia).
 | `intensity_max` | número | 1–5 | Teto da intensidade |
 | `transition_days` | inteiro par | 0 – estação mais curta | Dias de mistura centrados na virada (metade de cada lado); 0 = brusco |
 | `seasons.<id>` | objeto | um por estação do calendário | Taxas da estação |
-| `.water_inflow` / `.food_inflow` | número | ≥ 0 | Entrada natural por dia |
+| `.water_inflow` / `.food_inflow` | número | 0–100000 | Entrada natural por dia |
 | `.water_loss_rate` / `.food_loss_rate` | número | 0–1 | Perda por dia (evaporação, estrago) |
 | `.health_drift` | número | −10 a 10 | Variação diária de saúde (doença das chuvas) |
 | `.escalation` | objeto | expoentes −3 a 3 | Grandeza × intensidade^expoente. Negativo = piora diminuindo |
@@ -43,18 +43,18 @@ frações por dia (0,004 = 0,4% do estoque por dia).
 | Campo | Tipo | Faixa | O que é |
 |---|---|---|---|
 | `resources.water` / `.food` | objeto | os dois obrigatórios | Um por recurso |
-| `.initial` | número | ≤ `capacity` | Estoque inicial |
-| `.capacity` | número | ≥ 1 | Teto; excesso é perdido |
+| `.initial` | número | 0–1000000, ≤ `capacity` | Estoque inicial |
+| `.capacity` | número | 1–1000000 | Teto; excesso é perdido |
 | `.per_capita_daily` | número | 0–100 | Consumo por pessoa por dia |
 
 ## balance/population.json — população (D-026)
 | Campo | Tipo | Faixa | O que é |
 |---|---|---|---|
 | `families[]` | lista | ≥ 1 | `{id, size}`; id único, size 1–50 |
-| `health_initial` / `health_max` | número | inicial ≤ máximo | Saúde da colônia |
+| `health_initial` / `health_max` | número | 0–1000 / 1–1000; inicial ≤ máximo | Saúde da colônia |
 | `health_recovery_per_day` | número | 0–100 | Ganho de saúde em dia sem falta |
 | `water_shortage_health` / `food_shortage_health` | número | 0–100 | Perda de saúde com 100% de falta (proporcional ao déficit) |
-| `death_health_threshold` | número | ≤ `health_max` | Abaixo disso começam as mortes |
+| `death_health_threshold` | número | 0–1000, ≤ `health_max` | Abaixo disso começam as mortes |
 | `death_rate_max` | número | 0–1 | Chance diária por pessoa com saúde 0 |
 | `departure_shortage_days` | inteiro | 1–1000 | Dias seguidos com falta até uma família ir embora |
 

@@ -1,0 +1,9 @@
+{
+  "years": 6,
+  "outcomes": [
+    {"id": "cai"},
+    {"id": "resistiu", "from": 0.3},
+    {"id": "de_pe", "from": 0.6},
+    {"id": "terra_boa", "from": 0.8}
+  ]
+}

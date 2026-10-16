@@ -4,7 +4,8 @@ extends RefCounted
 ## e envia comandos. Ordem do tick conforme GDD 10; existem os passos
 ## 0 (comandos), 1 (Calendar), 2 (Season), 5a (efeitos dos prédios), 5 (Labor),
 ## 6 (Buildings: saque, desgaste, obras), 7 (Resources), 8 (Population) e
-## 10 (Narrative: diário e falas, só texto).
+## 10 (Narrative: diário e falas, só texto) e 11 (Campaign: fim da partida, D-046/D-047).
+## Depois de "campaign_ended" a simulação não avança mais.
 ##
 ## Comandos de jogo:
 ##   {"type": "set_labor", "task": "water"|"farm"|"care", "value": int ≥ 0}
@@ -25,6 +26,7 @@ var buildings: SimBuildings
 var narrative: SimNarrative
 var social: SimSocial
 var forecast: SimForecast
+var campaign: SimCampaign
 var modifiers := ModifierStack.new()
 
 var _events: Array[Dictionary] = []
@@ -48,6 +50,7 @@ func setup(seed_number: int = -1, data_dir: String = DataRegistry.DEFAULT_DIR) -
 	narrative = SimNarrative.new(data.section("narrative"))
 	social = SimSocial.new(data.section("social"))
 	forecast = SimForecast.new(data.section("forecast"), data.section("calendar"))
+	campaign = SimCampaign.new(data.section("campaign"), data.section("social"), population.people())
 	# Clima dos anos 1 e 2 sorteado antes de qualquer outro uso do RNG (ordem fixa).
 	forecast.draw_year(1, loop.rng)
 	forecast.draw_year(2, loop.rng)
@@ -68,6 +71,9 @@ func enqueue(command: Dictionary) -> bool:
 
 
 func step_day() -> void:
+	if campaign.ended:
+		loop.take_commands()  # comandos depois do fim são descartados
+		return
 	var first_event := _events.size()
 	# 0. Comandos (medidas sociais ficam para depois da virada do calendário, para
 	#    valerem na estação do dia que está sendo simulado — QA PR #15)
@@ -108,14 +114,22 @@ func step_day() -> void:
 		today.filter(func(e: Dictionary) -> bool: return e.type == "death").size(),
 		today.filter(func(e: Dictionary) -> bool: return e.type == "family_left").size()))
 	# 10. Narrative: lê os eventos do dia e acrescenta diário/falas
+	#     (o aviso do último ano sai antes, para a Narrative transformá-lo em fala)
+	var final_year := campaign.final_year_event(_events.slice(first_event))
+	_events.append_array(final_year)
 	_events.append_array(narrative.step(calendar.day_index, calendar.year(),
 		population.people(), _events.slice(first_event)))
+	# 11. Campaign: conta o dia e encerra no último dia do último ano
+	_events.append_array(campaign.step(calendar, population.people(),
+		_events.slice(first_event), social.uses))
 
 
 ## Avança pelo relógio de tempo real. Retorna quantos dias passaram.
 func advance(delta: float, speed: int) -> int:
 	var days := loop.days_due(delta, speed)
-	for _i in days:
+	for i in days:
+		if campaign.ended:
+			return i
 		step_day()
 	return days
 
@@ -145,6 +159,7 @@ func snapshot() -> Dictionary:
 		"buildings": buildings.snapshot(),
 		"social": social.snapshot(),
 		"forecast": forecast.forecast(calendar, season),
+		"campaign": campaign.snapshot(calendar),
 		"resources": _resources_snapshot(),
 		"modifiers": modifiers.entries(),
 		"seed": loop.seed_value,
@@ -194,7 +209,8 @@ func _apply_measure(command: Dictionary) -> void:
 	if not id is String:
 		_reject(command, "invalid_measure")
 		return
-	var why := social.check(id, calendar.season_id(), calendar.year(), water_fraction())
+	var why := "campaign_final" if campaign.measures_locked(calendar) \
+		else social.check(id, calendar.season_id(), calendar.year(), water_fraction())
 	if why != "":
 		_reject(command, why)
 		return
@@ -237,7 +253,7 @@ func _apply_labor(command: Dictionary) -> void:
 ## REJECT_<MOTIVO>. Lista completa em REJECT_REASONS.
 const REJECT_REASONS: PackedStringArray = ["unknown_type", "invalid_task", "not_integer",
 	"negative", "invalid_building", "queue_full", "invalid_measure", "wrong_season", "locked",
-	"already_enacted", "one_per_season"]
+	"already_enacted", "one_per_season", "campaign_final"]
 
 
 func _reject(command: Dictionary, reason: String) -> void:

@@ -21,6 +21,8 @@
     "MEASURE_AGUA_NA_ROCA": 2,
     "MEASURE_QUARENTENA": 2,
     "MEASURE_MUTIRAO": 2,
-    "MEASURE_CONFISCO": 2
-  }
+    "MEASURE_CONFISCO": 2,
+    "CAMPAIGN_FINAL_YEAR": 2
+  },
+  "campaign_resident": 4
 }

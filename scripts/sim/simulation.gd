@@ -24,6 +24,7 @@ var labor: SimLabor
 var buildings: SimBuildings
 var narrative: SimNarrative
 var social: SimSocial
+var forecast: SimForecast
 var modifiers := ModifierStack.new()
 
 var _events: Array[Dictionary] = []
@@ -46,6 +47,11 @@ func setup(seed_number: int = -1, data_dir: String = DataRegistry.DEFAULT_DIR) -
 	buildings = SimBuildings.new(data.section("buildings"))
 	narrative = SimNarrative.new(data.section("narrative"))
 	social = SimSocial.new(data.section("social"))
+	forecast = SimForecast.new(data.section("forecast"), data.section("calendar"))
+	# Clima dos anos 1 e 2 sorteado antes de qualquer outro uso do RNG (ordem fixa).
+	forecast.draw_year(1, loop.rng)
+	forecast.draw_year(2, loop.rng)
+	season.factors = forecast.factors()
 	season.publish(calendar, modifiers)  # tela já mostra as taxas do dia 1
 	social.publish(calendar.season_id(), calendar.year(), modifiers)
 	labor.step(population.people(), population.health, modifiers)
@@ -75,9 +81,13 @@ func step_day() -> void:
 	_events.append_array(calendar.advance())
 	for command in social_commands:
 		_apply_measure(command)
+	# 1b. Forecast: ao virar o ano, sorteia o clima do ano SEGUINTE (ponto fixo; o do ano
+	#     corrente já foi sorteado um ano antes, então Season deste dia não depende disto)
+	if _events.slice(first_event).any(func(e: Dictionary) -> bool: return e.type == "year_changed"):
+		forecast.draw_year(calendar.year() + 1, loop.rng)
+		season.factors = forecast.factors()
 	# 2. Season publica as taxas do dia
 	season.publish(calendar, modifiers)
-	# 3: Forecast — próxima etapa.
 	# 4. Social publica medidas ativas e curvas dos medidores
 	_events.append_array(social.publish(calendar.season_id(), calendar.year(), modifiers))
 	# 5a. Efeitos dos prédios (estação de hoje; condição e falta de água de ontem),
@@ -134,6 +144,7 @@ func snapshot() -> Dictionary:
 		"labor": labor.snapshot(),
 		"buildings": buildings.snapshot(),
 		"social": social.snapshot(),
+		"forecast": forecast.forecast(calendar, season),
 		"resources": _resources_snapshot(),
 		"modifiers": modifiers.entries(),
 		"seed": loop.seed_value,

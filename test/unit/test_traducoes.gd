@@ -86,6 +86,8 @@ func test_chaves_dinamicas_dos_dados_existem() -> void:
 			var k := "REACT_%s_%d" % [line, i + 1]
 			assert_true(_rows.has(k), "falta " + k)
 	assert_true(_rows.has("SETTLEMENT_NAME"))
+	for l in reg.section("forecast").levels:
+		assert_true(_rows.has("FORECAST_LEVEL_" + String(l.id).to_upper()), "falta FORECAST_LEVEL_" + String(l.id).to_upper())
 	for mid in reg.section("social").measures:
 		for suffix in ["", "_DESC"]:
 			var k: String = "MEASURE_" + String(mid).to_upper() + suffix

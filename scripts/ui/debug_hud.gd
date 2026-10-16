@@ -25,6 +25,7 @@ const LABOR_KEYS := {KEY_Q: ["water", 1], KEY_A: ["water", -1], KEY_W: ["farm", 
 const BUILD_KEYS := {KEY_Z: "cisterna", KEY_X: "silo", KEY_C: "canteiro", KEY_V: "abrigo"}
 var _buildings_label := Label.new()
 var _social_label := Label.new()
+var _forecast_label := Label.new()
 ## Teclas das medidas, na ordem de social.json (4 = primeira).
 const MEASURE_KEYS := [KEY_4, KEY_5, KEY_6, KEY_7, KEY_8, KEY_9]
 var _help_label := Label.new()
@@ -51,7 +52,7 @@ func _ready() -> void:
 	_date_label.add_theme_font_size_override("font_size", 32)
 	_season_label.add_theme_font_size_override("font_size", 22)
 	_help_label.modulate = Color(1, 1, 1, 0.6)
-	for l in [_date_label, _season_label, _intensity_label]:
+	for l in [_date_label, _season_label, _intensity_label, _forecast_label]:
 		box.add_child(l)
 	for id in DataRegistry.RESOURCE_IDS:
 		var l := Label.new()
@@ -222,6 +223,7 @@ func _refresh(s: Dictionary) -> void:
 	_labor_label.text = labor_text(s.labor, _pending)
 	_buildings_label.text = _buildings_text(s)
 	_social_label.text = social_text(s)
+	_forecast_label.text = forecast_text(s.forecast)
 	var mods: PackedStringArray = []
 	for m in s.modifiers:
 		mods.append("%s %s" % [m.key, ("×%.2f" % m.mul) if m.mul != 1.0 else signed(m.add)])
@@ -288,6 +290,24 @@ func _buildings_text(s: Dictionary) -> String:
 			names.append(tr("BUILDING_" + id.to_upper()))
 		text += "\n" + tr("HUD_BUILD_REQUESTED").format({"names": ", ".join(names)})
 	return text
+
+
+## Previsão (D-042): faixa honesta e nível; durante a severa, a intensidade real.
+func forecast_text(f: Dictionary) -> String:
+	if f.is_empty():
+		return ""
+	var pt := TranslationServer.get_locale().begins_with("pt")
+	var fmt := func(v: float) -> String:
+		var t := "%.2f" % v
+		return t.replace(".", ",") if pt else t
+	if f.now:
+		return tr("HUD_FORECAST_NOW").format({"season": _season_name(f.season),
+			"value": fmt.call(f.intensity), "level": tr("FORECAST_LEVEL_" + String(f.level).to_upper())})
+	var lvl: String = tr("FORECAST_LEVEL_" + String(f.level_low).to_upper())
+	if f.level_high != f.level_low:
+		lvl = tr("HUD_FORECAST_LEVELS").format({"a": lvl, "b": tr("FORECAST_LEVEL_" + String(f.level_high).to_upper())})
+	return tr("HUD_FORECAST").format({"season": _season_name(f.season), "days": f.days, "level": lvl,
+		"low": fmt.call(f.low), "high": fmt.call(f.high), "center": fmt.call(f.center)})
 
 
 ## Medidores e medidas disponíveis (custo atual, estado).

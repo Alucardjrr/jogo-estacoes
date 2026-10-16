@@ -168,3 +168,9 @@ REJECT_WRONG_SEASON,medida de outra estação,measure for another season
 REJECT_LOCKED,medida só liberada em desespero,measure only available in desperation
 REJECT_ALREADY_ENACTED,medida já ativada nesta estação,measure already enacted this season
 REJECT_ONE_PER_SEASON,só uma medida por estação,only one measure per season
+FORECAST_LEVEL_BRANDA,Branda,Mild
+FORECAST_LEVEL_DURA,Dura,Harsh
+FORECAST_LEVEL_IMPLACAVEL,Implacável,Relentless
+HUD_FORECAST,"Previsão: {season} em {days} dias — {level} (intensidade entre {low} e {high}; estimativa {center}, pode errar para os dois lados)","Forecast: {season} in {days} days — {level} (intensity between {low} and {high}; estimate {center}, may be off either way)"
+HUD_FORECAST_NOW,"{season} agora: intensidade {value} ({level})","{season} now: intensity {value} ({level})"
+HUD_FORECAST_LEVELS,{a} a {b},{a} to {b}

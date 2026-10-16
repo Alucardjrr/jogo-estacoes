@@ -34,6 +34,8 @@ const SOC_OK := {"trust_initial": 75, "cohesion_initial": 75, "recovery_per_day"
 	"residual_fraction": 0.333, "repeat_cost_increase": 0.5, "one_per_season": true,
 	"measures": {"racionamento": {"seasons": ["seca"], "trust_cost": 15, "cohesion_cost": 0,
 		"effects": [{"key": "water_consumption", "mul": 0.6}]}}}
+const FC_OK := {"variance": 0.18, "first_varied_year": 1, "k_far": 1.0, "k_near": 0.25, "horizon_days": 90,
+	"levels": [{"id": "branda", "below": 1.15}, {"id": "dura", "below": 1.45}, {"id": "implacavel"}]}
 const NAR_OK := {"hard_shortage_days": 10, "residents": 12, "diary_lines": 3,
 	"season_group": {"seca": "SECA", "chuvas": "CHUVAS"},
 	"reaction_lines": {"DEATH": 4, "FAMILY_LEFT": 4, "BUILDING_DONE": 4, "SHORTAGE_WATER": 3,
@@ -67,7 +69,8 @@ func _write(name: String, content: Variant) -> void:
 
 func _load_with(sim: Variant, cal: Variant, season: Variant = SEASON_OK,
 		res: Variant = RES_OK, pop: Variant = POP_OK, lab: Variant = LAB_OK,
-		bld: Variant = BLD_OK, nar: Variant = NAR_OK, soc: Variant = SOC_OK) -> DataRegistry:
+		bld: Variant = BLD_OK, nar: Variant = NAR_OK, soc: Variant = SOC_OK,
+		fc: Variant = FC_OK) -> DataRegistry:
 	_write("sim.json", sim)
 	_write("calendar.json", cal)
 	_write("season.json", season)
@@ -77,6 +80,7 @@ func _load_with(sim: Variant, cal: Variant, season: Variant = SEASON_OK,
 	_write("buildings.json", bld)
 	_write("narrative.json", nar)
 	_write("social.json", soc)
+	_write("forecast.json", fc)
 	var reg := DataRegistry.new()
 	reg.load_all(TMP_DIR)
 	return reg
@@ -456,3 +460,15 @@ func test_social_curva_e_medida_sem_fala() -> void:
 	var reg := _soc(soc)
 	assert_true(_has_error(reg, "mid_at maior que full_at"))
 	assert_true(_has_error(reg, "reaction_lines: falta a chave 'MEASURE_OUTRA'"))
+
+
+# --- forecast.json ---
+
+func test_forecast_invalido() -> void:
+	var fc := FC_OK.duplicate(true)
+	fc.k_near = 2.0
+	fc.levels = [{"id": "a", "below": 1.4}, {"id": "b", "below": 1.2}, {"id": "c", "below": 3}]
+	var reg := _load_with(SIM_OK, CAL_OK, SEASON_OK, RES_OK, POP_OK, LAB_OK, BLD_OK, NAR_OK, SOC_OK, fc)
+	assert_true(_has_error(reg, "k_near maior que k_far"))
+	assert_true(_has_error(reg, "below precisa ser crescente"))
+	assert_true(_has_error(reg, "levels[2]: chave desconhecida 'below'"), "o último nível não tem limite")

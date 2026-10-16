@@ -71,7 +71,8 @@ func _init() -> void:
 				search = true
 			"builds":
 				builds = Array((kv[1] if kv.size() > 1 else "").split(",", false))
-	if strategies.is_empty():
+	var explicit := not strategies.is_empty()
+	if not explicit:
 		strategies = REFERENCE.duplicate(true)
 		strategies["adaptativo (lê previsão e estoques)"] = {"policy": Adaptive.new()}
 	if search:
@@ -79,7 +80,8 @@ func _init() -> void:
 		if _failed:
 			return
 	else:
-		if not builds.is_empty():
+		# --builds só vale para --fixed/--plan (as referências têm planos próprios).
+		if explicit and not builds.is_empty():
 			for name in strategies:
 				strategies[name].builds = builds
 		print("sementes=%d anos=%d dados=%s" % [opt.seeds, opt.years, opt.data])

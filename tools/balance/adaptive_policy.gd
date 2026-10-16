@@ -12,9 +12,10 @@ extends RefCounted
 ##   chuvas: roça + cuidado proporcional à intensidade real da estação.
 ##   em qualquer estação: se a comida dura menos que `food_alarm` dias, desloca gente
 ##     para a roça; se a água dura menos que `water_alarm`, para a água.
+## Não constrói nem saqueia (zera build/salvage a cada revisão); não combinar com `builds`.
 
 var p := {
-	"workers_hint": 30, "review_days": 15,
+	"review_days": 15,
 	"window_water": 6, "window_care_normal": 6, "window_care_harsh": 0,
 	"care_per_intensity": 6.0, "food_alarm": 30, "water_alarm": 20,
 }

@@ -69,7 +69,6 @@ func test_dados_invalidos_nao_travam() -> void:
 	assert_true(r.has("error"))
 
 
-
 func test_adaptativo_vence_o_rigido() -> void:
 	# Estratégia que lê previsão, estoques e saúde (tools/balance/adaptive_policy.gd).
 	var ad := Run.summary({"policy": preload("res://tools/balance/adaptive_policy.gd").new()}, SEEDS, YEARS)

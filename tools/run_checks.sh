@@ -19,7 +19,9 @@ step "1/4 Import"
 # ignorados no git). Por isso importa duas vezes e só o 2º log conta.
 timeout 600 "$GODOT" --headless --import --path . >"$LOGS/import_1.log" 2>&1
 timeout 600 "$GODOT" --headless --import --path . >"$LOGS/import.log" 2>&1
-if grep -E "$ERRORS" "$LOGS/import.log"; then
+# No 1º log, só as linhas dos .translation são toleradas.
+if grep -E "$ERRORS" "$LOGS/import_1.log" | grep -v '\.translation' | grep . \
+	|| grep -E "$ERRORS" "$LOGS/import.log"; then
 	echo "FALHOU: erros no import (ver $LOGS/import.log)"; status=1
 else
 	echo "ok"

@@ -7,6 +7,12 @@ extends RefCounted
 ## fica disponível — a simulação não roda com dados parcialmente válidos.
 
 const DEFAULT_DIR := "res://data/balance"
+## Recursos do protótipo. Fixos no código porque cada um tem regra própria em
+## SimResources; os números de cada um vêm de resources.json.
+const RESOURCE_IDS: PackedStringArray = ["water", "food"]
+## Grandezas que Season publica por estação (uma por recurso e tipo).
+const SEASON_KEYS: PackedStringArray = [
+	"water_inflow", "water_loss_rate", "food_inflow", "food_loss_rate"]
 
 var errors: PackedStringArray = []
 
@@ -20,12 +26,23 @@ func load_all(dir: String = DEFAULT_DIR) -> bool:
 	var loaded := {
 		"sim": _load_json(dir.path_join("sim.json")),
 		"calendar": _load_json(dir.path_join("calendar.json")),
+		"season": _load_json(dir.path_join("season.json")),
+		"resources": _load_json(dir.path_join("resources.json")),
 	}
 	var parsed := {}
 	if loaded.sim is Dictionary:
 		parsed.sim = _parse_sim(loaded.sim, "sim.json")
+	var calendar_ok := false
 	if loaded.calendar is Dictionary:
+		var before := errors.size()
 		parsed.calendar = _parse_calendar(loaded.calendar, "calendar.json")
+		calendar_ok = errors.size() == before
+	if loaded.season is Dictionary:
+		# Checagem cruzada só com calendário válido, para não somar ruído ao erro real.
+		parsed.season = _parse_season(loaded.season, "season.json",
+			parsed.calendar if calendar_ok else {})
+	if loaded.resources is Dictionary:
+		parsed.resources = _parse_resources(loaded.resources, "resources.json")
 	if not errors.is_empty():
 		return false
 	_data = parsed
@@ -36,7 +53,8 @@ func is_loaded() -> bool:
 	return not _data.is_empty()
 
 
-## Dados já normalizados (ints como int) de um sistema: "sim" ou "calendar".
+## Dados já normalizados (ints como int) de um sistema: "sim", "calendar",
+## "season" ou "resources".
 func section(name: String) -> Dictionary:
 	return _data.get(name, {})
 
@@ -112,6 +130,98 @@ func _parse_calendar(d: Dictionary, src: String) -> Dictionary:
 	if not seasons.is_empty() and d.has("months_per_year") and total_months != out.months_per_year:
 		errors.append("%s: soma dos meses das estações (%d) difere de months_per_year (%d)" % [
 			src, total_months, out.months_per_year])
+	return out
+
+
+## Referência cruzada: as estações de season.json precisam ser exatamente as de
+## calendar.json (nem faltando, nem sobrando).
+func _parse_season(d: Dictionary, src: String, calendar: Dictionary) -> Dictionary:
+	_check_keys(d, ["intensity_per_year", "intensity_max", "seasons"], src)
+	var out := {
+		"intensity_per_year": _float(d, "intensity_per_year", src, 0.0, 1.0),
+		"intensity_max": _float(d, "intensity_max", src, 1.0, 5.0),
+		"seasons": {},
+	}
+	if not d.has("seasons"):
+		return out
+	if not d.seasons is Dictionary:
+		errors.append("%s: seasons precisa ser um objeto {}" % src)
+		return out
+	var seasons: Dictionary = d.seasons
+	var allowed: Array = SEASON_KEYS.duplicate()
+	allowed.append("escalation")
+	for id in seasons.keys():
+		var where := "%s: seasons.%s" % [src, id]
+		if not id is String or _id_regex.search(id) == null:
+			errors.append("%s: id inválido (use minúsculas, dígitos e _)" % where)
+			continue
+		if not seasons[id] is Dictionary:
+			errors.append("%s: precisa ser um objeto {}" % where)
+			continue
+		var s: Dictionary = seasons[id]
+		_check_keys(s, allowed, where)
+		var entry := {
+			"water_inflow": _float(s, "water_inflow", where, 0.0, 100000.0),
+			"water_loss_rate": _float(s, "water_loss_rate", where, 0.0, 1.0),
+			"food_inflow": _float(s, "food_inflow", where, 0.0, 100000.0),
+			"food_loss_rate": _float(s, "food_loss_rate", where, 0.0, 1.0),
+			"escalation": {},
+		}
+		if s.has("escalation"):
+			if not s.escalation is Dictionary:
+				errors.append("%s: escalation precisa ser um objeto {}" % where)
+			else:
+				var esc: Dictionary = s.escalation
+				for k in esc.keys():
+					if not SEASON_KEYS.has(k):
+						errors.append("%s.escalation: chave desconhecida '%s'" % [where, k])
+						continue
+					entry.escalation[k] = _float(esc, k, where + ".escalation", -3.0, 3.0)
+		out.seasons[id] = entry
+	var cal_ids := []
+	for cs in calendar.get("seasons", []):
+		cal_ids.append(cs.id)
+	for cid in cal_ids:
+		if not seasons.has(cid):
+			errors.append("%s: falta a estação '%s' (definida em calendar.json)" % [src, cid])
+	if not cal_ids.is_empty():
+		for id in seasons.keys():
+			if not cal_ids.has(id):
+				errors.append("%s: estação '%s' não existe em calendar.json" % [src, str(id)])
+	return out
+
+
+func _parse_resources(d: Dictionary, src: String) -> Dictionary:
+	_check_keys(d, ["placeholder_population", "resources"], src)
+	var out := {
+		"placeholder_population": _int(d, "placeholder_population", src, 0, 100000),
+		"resources": {},
+	}
+	if not d.has("resources"):
+		return out
+	if not d.resources is Dictionary:
+		errors.append("%s: resources precisa ser um objeto {}" % src)
+		return out
+	var res: Dictionary = d.resources
+	_check_keys(res, Array(RESOURCE_IDS), src + ": resources")
+	for id in RESOURCE_IDS:
+		if not res.has(id):
+			continue
+		var where := "%s: resources.%s" % [src, id]
+		if not res[id] is Dictionary:
+			errors.append("%s: precisa ser um objeto {}" % where)
+			continue
+		var r: Dictionary = res[id]
+		_check_keys(r, ["initial", "capacity", "per_capita_daily"], where)
+		var entry := {
+			"initial": _float(r, "initial", where, 0.0, 1000000.0),
+			"capacity": _float(r, "capacity", where, 1.0, 1000000.0),
+			"per_capita_daily": _float(r, "per_capita_daily", where, 0.0, 100.0),
+		}
+		if r.has("initial") and r.has("capacity") and entry.initial > entry.capacity:
+			errors.append("%s: initial (%s) maior que capacity (%s)" % [
+				where, entry.initial, entry.capacity])
+		out.resources[id] = entry
 	return out
 
 

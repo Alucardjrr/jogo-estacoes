@@ -1,5 +1,6 @@
 extends Control
-## Tela de debug do protótipo: data, estação, velocidade, idioma e log de viradas.
+## Tela de debug do protótipo: data, estação, intensidade, recursos, modificadores,
+## velocidade, idioma e log de viradas.
 ## Só lê o estado de `Game`; não altera a simulação. Textos via tr() (data/text/ui.csv)
 ## e refeitos quando o idioma muda.
 
@@ -8,6 +9,9 @@ const LOG_LINES := 8
 var _date_label := Label.new()
 var _season_label := Label.new()
 var _status_label := Label.new()
+var _intensity_label := Label.new()
+var _resource_labels := {}  # id do recurso -> Label
+var _modifiers_label := Label.new()
 var _help_label := Label.new()
 var _log_label := Label.new()
 var _pause_button := Button.new()
@@ -32,8 +36,16 @@ func _ready() -> void:
 	_date_label.add_theme_font_size_override("font_size", 32)
 	_season_label.add_theme_font_size_override("font_size", 22)
 	_help_label.modulate = Color(1, 1, 1, 0.6)
-	for l in [_date_label, _season_label, _status_label]:
+	for l in [_date_label, _season_label, _intensity_label]:
 		box.add_child(l)
+	for id in DataRegistry.RESOURCE_IDS:
+		var l := Label.new()
+		l.add_theme_font_size_override("font_size", 20)
+		_resource_labels[id] = l
+		box.add_child(l)
+	_modifiers_label.modulate = Color(1, 1, 1, 0.6)
+	box.add_child(_modifiers_label)
+	box.add_child(_status_label)
 
 	box.add_child(_buttons)
 	_pause_button.pressed.connect(func() -> void: Game.set_paused(true))
@@ -114,6 +126,37 @@ func _refresh(s: Dictionary) -> void:
 	_season_label.text = tr("HUD_SEASON").format(
 		{"season": _season_name(s.season), "day": s.day_in_season, "total": s.season_days})
 	_season_label.modulate = Color("ffb36b") if s.season_severe else Color("cfe8c4")
+	_intensity_label.text = tr("HUD_INTENSITY").format(
+		{"value": "%.2f" % s.intensity, "population": s.population})
+	for id in DataRegistry.RESOURCE_IDS:
+		var r: Dictionary = s.resources[id]
+		var label: Label = _resource_labels[id]
+		label.text = tr("HUD_RESOURCE").format({
+			"name": tr("RESOURCE_" + id.to_upper()),
+			"stock": roundi(r.stock), "capacity": roundi(r.capacity),
+			"inflow": _num(r.inflow), "consumed": _num(r.consumed), "lost": _num(r.lost)})
+		if r.overflow > 0.0:
+			label.text += "  " + tr("HUD_OVERFLOW").format({"amount": _num(r.overflow)})
+		if r.deficit > 0.0:
+			label.text += "  " + tr("HUD_SHORTAGE").format({"amount": _num(r.deficit)})
+			label.modulate = Color("ff6b6b")
+		elif r.stock < r.capacity * 0.1:
+			label.modulate = Color("ffb36b")
+		else:
+			label.modulate = Color.WHITE
+	var mods: PackedStringArray = []
+	for m in s.modifiers:
+		mods.append("%s %s" % [m.key, ("×%.2f" % m.mul) if m.mul != 1.0 else "+" + _num(m.add)])
+	_modifiers_label.text = tr("HUD_MODIFIERS") + " " + " · ".join(mods)
+
+
+## Número curto para a tela: inteiro se >= 10, 1 casa se >= 0,1, senão 4 casas (taxas).
+func _num(v: float) -> String:
+	if absf(v) >= 10.0:
+		return str(roundi(v))
+	if absf(v) >= 0.1:
+		return "%.1f" % v
+	return "%.4f" % v
 
 
 func _render_log() -> void:

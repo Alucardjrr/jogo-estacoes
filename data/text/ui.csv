@@ -25,3 +25,10 @@ HUD_HELP,Espaço: pausar · 1/2/3: velocidade · L: idioma,Space: pause · 1/2/3
 HUD_DATA_ERROR,Erro nos dados de balanceamento:,Balance data error:
 EVENT_SEASON_CHANGED,"Começou: {season} (Ano {year})","Started: {season} (Year {year})"
 EVENT_YEAR_CHANGED,Ano {year} começou,Year {year} began
+RESOURCE_WATER,Água,Water
+RESOURCE_FOOD,Comida,Food
+HUD_INTENSITY,"Intensidade da estação ×{value} · População {population}","Season intensity ×{value} · Population {population}"
+HUD_RESOURCE,"{name}: {stock} / {capacity}   (+{inflow} entrada, −{consumed} consumo, −{lost} perda)","{name}: {stock} / {capacity}   (+{inflow} in, −{consumed} used, −{lost} lost)"
+HUD_OVERFLOW,transbordou {amount},overflow {amount}
+HUD_SHORTAGE,FALTA {amount},SHORTAGE {amount}
+HUD_MODIFIERS,Modificadores:,Modifiers:

@@ -106,3 +106,64 @@ func test_relogio_acumula_frames_pequenos() -> void:
 	for _i in 180:  # 3 s a 60 fps
 		days += sim.advance(1.0 / 60.0, 1)
 	assert_eq(days, 1)
+
+
+# --- Season + Resources com os dados do projeto ---
+
+func _shortages(events: Array[Dictionary], resource: String) -> int:
+	return events.filter(func(e: Dictionary) -> bool:
+		return e.type == "shortage" and e.resource == resource).size()
+
+
+func test_ano_1_sem_jogador_sobrevive_sem_falta() -> void:
+	var sim := _new_sim()
+	_run(sim, 359)  # até o último dia do ano 1
+	assert_eq(sim.calendar.year(), 1)
+	var events := sim.drain_events()
+	assert_eq(_shortages(events, "water"), 0)
+	assert_eq(_shortages(events, "food"), 0)
+
+
+func test_ano_2_sem_jogador_falta_comida_na_seca() -> void:
+	var sim := _new_sim()
+	_run(sim, 359)
+	sim.drain_events()
+	_run(sim, 90)  # seca do ano 2
+	assert_eq(sim.calendar.season_id(), "seca")
+	assert_almost_eq(sim.snapshot().intensity, 1.15, 1e-9)
+	assert_gt(_shortages(sim.drain_events(), "food"), 0, "linha de base precisa quebrar no ano 2")
+
+
+func test_virada_de_estacao_usa_taxas_da_nova_estacao_no_mesmo_dia() -> void:
+	var sim := _new_sim()
+	_run(sim, 90)  # dia 1 da janela_1
+	assert_eq(sim.calendar.season_id(), "janela_1")
+	var janela: Dictionary = sim.data.section("season").seasons.janela_1
+	assert_eq(sim.snapshot().resources.water.inflow, janela.water_inflow)
+
+
+func test_snapshot_de_recursos_e_modificadores() -> void:
+	var sim := _new_sim()
+	var s := sim.snapshot()
+	assert_eq(s.population, sim.data.section("resources").placeholder_population)
+	assert_eq(s.resources.water.stock, 4500.0)
+	assert_eq(s.resources.water.capacity, 6000.0)
+	assert_eq(s.modifiers.size(), DataRegistry.SEASON_KEYS.size(), "taxas do dia 1 já publicadas")
+	_run(sim, 1)
+	assert_eq(sim.snapshot().resources.food.consumed, 50.0)
+
+
+func test_recursos_deterministicos() -> void:
+	var a := _new_sim(5)
+	var b := _new_sim(5)
+	_run(a, 1000)
+	_run(b, 1000)
+	assert_eq(a.snapshot().resources, b.snapshot().resources)
+
+
+func test_setup_reinicia_recursos() -> void:
+	var sim := _new_sim()
+	_run(sim, 100)
+	assert_true(sim.setup(7))
+	assert_eq(sim.resources.stock.water, 4500.0)
+	assert_eq(sim.modifiers.entries().size(), DataRegistry.SEASON_KEYS.size())

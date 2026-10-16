@@ -1,0 +1,7 @@
+{
+  "placeholder_population": 50,
+  "resources": {
+    "water": { "initial": 4500, "capacity": 6000, "per_capita_daily": 1.0 },
+    "food": { "initial": 3000, "capacity": 6000, "per_capita_daily": 1.0 }
+  }
+}

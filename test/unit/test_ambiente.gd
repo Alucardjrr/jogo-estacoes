@@ -59,3 +59,43 @@ func test_log_mostra_diario_e_falas_traduzidos() -> void:
 	assert_false(text.contains("DIARY_") or text.contains("REACT_"), "chave sem tradução: " + text)
 	assert_true(text.contains(tr("RESIDENT_06")))
 	assert_true(text.contains(tr("BUILDING_SILO")))
+
+
+func test_pulo_de_dev() -> void:
+	assert_eq(GameScript.days_to_next_season(1, 90), 90)
+	assert_eq(GameScript.days_to_next_season(90, 90), 1)
+	assert_eq(GameScript.days_to_next_year(0, 360), 360)
+	assert_eq(GameScript.days_to_next_year(359, 360), 1)
+	assert_eq(GameScript.days_to_next_year(360, 360), 360)
+
+
+func test_pulo_nao_existe_em_prod() -> void:
+	var dev: bool = Game.dev_mode
+	Game.dev_mode = false
+	var before: int = Game.sim.calendar.day_index
+	assert_eq(Game.dev_skip(360), 0)
+	assert_eq(Game.sim.calendar.day_index, before)
+	Game.dev_mode = dev
+
+
+
+func test_pulo_em_dev_vai_ao_proximo_ano_e_para_no_fim() -> void:
+	# Simulação própria no lugar da do autoload, para não sujar outros testes.
+	var real: Simulation = Game.sim
+	var dev: bool = Game.dev_mode
+	var sim := Simulation.new()
+	assert_true(sim.setup(1))
+	Game.sim = sim
+	Game.dev_mode = true
+	watch_signals(Game)
+	var dpy := sim.calendar.days_per_year()
+	assert_eq(Game.dev_skip(GameScript.days_to_next_year(sim.calendar.day_index, dpy)), dpy)
+	assert_eq(sim.calendar.day_index % dpy, 0)
+	assert_eq(sim.calendar.year(), 2)
+	assert_signal_emit_count(Game, "day_passed", 1)
+	var left := sim.campaign.days_left(sim.calendar) - 1  # dias que ainda faltam simular
+	assert_eq(Game.dev_skip(100000), left)
+	assert_true(sim.campaign.ended)
+	assert_eq(Game.dev_skip(10), 0)
+	Game.sim = real
+	Game.dev_mode = dev

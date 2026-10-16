@@ -120,6 +120,11 @@ func _unhandled_input(event: InputEvent) -> void:
 				Game.set_paused(true)
 		KEY_1, KEY_2, KEY_3:
 			Game.set_speed_index(event.keycode - KEY_1)
+		KEY_J, KEY_K when Game.dev_mode and not _last_snapshot.is_empty():
+			# Só dev: pula um ano (J) ou uma estação (K), simulando os dias.
+			var s := _last_snapshot
+			Game.dev_skip(Game.days_to_next_year(s.day_index, Game.sim.calendar.days_per_year())
+				if event.keycode == KEY_J else Game.days_to_next_season(s.day_in_season, s.season_days))
 		_:
 			if LABOR_KEYS.has(event.keycode):
 				_adjust_labor(LABOR_KEYS[event.keycode][0], LABOR_KEYS[event.keycode][1])
@@ -152,7 +157,7 @@ func _adjust_labor(task: String, delta: int) -> void:
 func _refresh_all() -> void:
 	_pause_button.text = tr("HUD_PAUSE_BUTTON")
 	_locale_button.text = tr("HUD_LANGUAGE")
-	_help_label.text = tr("HUD_HELP")
+	_help_label.text = tr("HUD_HELP") + ("\n" + tr("HUD_HELP_DEV") if Game.dev_mode else "")
 	if not Game.ready_ok:
 		_date_label.text = tr("HUD_DATA_ERROR")
 		_season_label.text = "\n".join(Game.sim.data.errors)

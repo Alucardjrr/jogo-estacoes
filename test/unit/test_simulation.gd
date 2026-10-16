@@ -134,12 +134,20 @@ func test_ano_2_sem_jogador_falta_comida_na_seca() -> void:
 	assert_gt(_shortages(sim.drain_events(), "food"), 0, "linha de base precisa quebrar no ano 2")
 
 
-func test_virada_de_estacao_usa_taxas_da_nova_estacao_no_mesmo_dia() -> void:
+func test_transicao_gradual_entre_estacoes() -> void:
 	var sim := _new_sim()
-	_run(sim, 90)  # dia 1 da janela_1
-	assert_eq(sim.calendar.season_id(), "janela_1")
-	var janela: Dictionary = sim.data.section("season").seasons.janela_1
-	assert_eq(sim.snapshot().resources.water.inflow, janela.water_inflow)
+	var seasons: Dictionary = sim.data.section("season").seasons
+	var half: int = sim.data.section("season").transition_days / 2
+	var inflows: Array[float] = []
+	for _i in 90 + half + 5:  # da seca até depois do fim da transição
+		sim.step_day()
+		inflows.append(sim.snapshot().resources.water.inflow)
+	var start := 90 - half - 1  # índice do 1º dia da transição (inflows[0] = dia 1)
+	assert_eq(inflows[start - 1], seasons.seca.water_inflow, "antes da transição: seca pura")
+	for i in range(start, 90 + half - 1):
+		assert_gt(inflows[i], inflows[i - 1], "sobe aos poucos (dia %d)" % i)
+		assert_lt(inflows[i], seasons.janela_1.water_inflow)
+	assert_eq(inflows[-1], seasons.janela_1.water_inflow, "depois da transição: janela pura")
 
 
 func test_snapshot_de_recursos_e_modificadores() -> void:

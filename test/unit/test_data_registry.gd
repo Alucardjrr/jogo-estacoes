@@ -8,7 +8,7 @@ const SIM_OK := {"seconds_per_day": 3.0, "speeds": [1, 2, 3],
 const CAL_OK := {"days_per_month": 30, "months_per_year": 12, "seasons": [
 	{"id": "seca", "months": 6, "severe": true},
 	{"id": "chuvas", "months": 6, "severe": true}]}
-const SEASON_OK := {"intensity_per_year": 0.15, "intensity_max": 2.0, "seasons": {
+const SEASON_OK := {"intensity_per_year": 0.15, "intensity_max": 2.0, "transition_days": 20, "seasons": {
 	"seca": {"water_inflow": 12, "water_loss_rate": 0.004, "food_inflow": 25,
 		"food_loss_rate": 0.002, "health_drift": 0, "escalation": {"water_inflow": -1}},
 	"chuvas": {"water_inflow": 110, "water_loss_rate": 0.0005, "food_inflow": 40,
@@ -270,3 +270,13 @@ func test_resources_nao_aceita_mais_populacao_provisoria() -> void:
 	var res := RES_OK.duplicate(true)
 	res["placeholder_population"] = 50
 	assert_true(_has_error(_load_with(SIM_OK, CAL_OK, SEASON_OK, res), "chave desconhecida 'placeholder_population'"))
+
+
+
+func test_transicao_maior_que_a_estacao() -> void:
+	var season := SEASON_OK.duplicate(true)
+	season.transition_days = 181  # estações de CAL_OK têm 180 dias
+	var reg := _load_with(SIM_OK, CAL_OK, season)
+	assert_true(_has_error(reg, "transition_days (181) maior que a estação mais curta (180 dias)"))
+	season.transition_days = 2.5
+	assert_true(_has_error(_load_with(SIM_OK, CAL_OK, season), "transition_days: precisa ser inteiro"))

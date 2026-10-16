@@ -4,7 +4,7 @@ extends GutTest
 const CAL := {"days_per_month": 30, "months_per_year": 12, "seasons": [
 	{"id": "seca", "months": 6, "severe": true},
 	{"id": "janela", "months": 6, "severe": false}]}
-const CFG := {"intensity_per_year": 0.5, "intensity_max": 2.0, "seasons": {
+const CFG := {"intensity_per_year": 0.5, "intensity_max": 2.0, "transition_days": 0, "seasons": {
 	"seca": {"water_inflow": 10.0, "water_loss_rate": 0.01, "food_inflow": 20.0,
 		"food_loss_rate": 0.0, "health_drift": -0.5,
 		"escalation": {"water_inflow": -1.0, "water_loss_rate": 1.0, "health_drift": 1.0}},
@@ -55,3 +55,60 @@ func test_publish_substitui_os_valores_anteriores() -> void:
 	s.publish(_cal(1, false), m)
 	assert_eq(m.value("water_inflow"), 25.0, "50 da janela × 0,5 de outra fonte, sem acumular")
 	assert_eq(m.entries().size(), DataRegistry.SEASON_KEYS.size() + 1)
+
+
+
+# --- Transição (D-027) ---
+
+func _blend(days: int) -> SimSeason:
+	var cfg := CFG.duplicate(true)
+	cfg.transition_days = days
+	return SimSeason.new(cfg)
+
+
+func _at(day: int) -> SimCalendar:
+	var c := SimCalendar.new(CAL)
+	c.day_index = day
+	return c
+
+
+func test_fora_da_transicao_valor_puro() -> void:
+	var s := _blend(20)
+	assert_eq(s.rate(_at(100), "water_inflow"), 10.0)
+	assert_eq(s.rate(_at(169), "water_inflow"), 10.0, "último dia antes da janela de transição")
+	assert_eq(s.rate(_at(190), "water_inflow"), 50.0)
+
+
+func test_primeiro_dia_do_jogo_nao_mistura() -> void:
+	assert_eq(_blend(20).rate(_at(0), "water_inflow"), 10.0)
+
+
+func test_transicao_simetrica_na_virada() -> void:
+	# último dia da seca + 1º da janela = soma das duas taxas (smoothstep é simétrica)
+	var s := _blend(20)
+	assert_almost_eq(s.rate(_at(179), "water_inflow") + s.rate(_at(180), "water_inflow"), 60.0, 1e-9)
+
+
+func test_transicao_monotona_e_dentro_dos_limites() -> void:
+	var s := _blend(20)
+	var last := s.rate(_at(169), "water_inflow")
+	for d in range(170, 190):
+		var v := s.rate(_at(d), "water_inflow")
+		assert_gt(v, last, "dia %d" % d)
+		assert_lt(v, 50.0)
+		last = v
+
+
+func test_transicao_na_virada_do_ano_usa_intensidade_do_ano_novo() -> void:
+	# janela (ano 1) → seca (ano 2, intensidade 1,5: entrada 10/1,5).
+	var s := _blend(20)
+	var first_dry := 10.0 / 1.5
+	assert_almost_eq(s.rate(_at(359), "water_inflow") + s.rate(_at(360), "water_inflow"),
+		50.0 + first_dry, 1e-9)
+	assert_almost_eq(s.rate(_at(370), "water_inflow"), first_dry, 1e-9)
+
+
+func test_transicao_zero_e_brusca() -> void:
+	var s := _blend(0)
+	assert_eq(s.rate(_at(179), "water_inflow"), 10.0)
+	assert_eq(s.rate(_at(180), "water_inflow"), 50.0)

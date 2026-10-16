@@ -11,6 +11,9 @@ var settings := GameSettings.new()
 ## Caminho das preferências; os testes trocam para não mexer no arquivo real.
 var settings_path := GameSettings.PATH
 var ready_ok := false
+## Ambiente (D-029): dev = editor/build de debug ou feature "dev"; prod = build
+## de release ou feature "prod". Ferramentas de debug só existem em dev.
+var dev_mode := is_dev_environment(OS.is_debug_build(), OS.has_feature("dev"), OS.has_feature("prod"))
 var paused := true
 var speed_index := 0
 
@@ -25,12 +28,27 @@ func _ready() -> void:
 		for e in sim.data.errors:
 			push_error("[dados] " + e)
 		return
-	# Playtest/captura: `godot --path . -- --speed=3` começa rodando nessa velocidade.
-	for arg in OS.get_cmdline_user_args():
+	# Playtest/captura (só dev): `godot --path . -- --speed=3` começa rodando nessa velocidade.
+	var i := start_speed_index(OS.get_cmdline_user_args(), speeds(), dev_mode)
+	if i >= 0:
+		set_speed_index(i)
+
+
+## Índice da velocidade pedida por `--speed=N`, ou -1. Em prod sempre -1.
+static func start_speed_index(args: PackedStringArray, available: Array, dev: bool) -> int:
+	if not dev:
+		return -1
+	for arg in args:
 		if arg.begins_with("--speed="):
-			var i := speeds().find(arg.trim_prefix("--speed=").to_int())
-			if i >= 0:
-				set_speed_index(i)
+			return available.find(arg.trim_prefix("--speed=").to_int())
+	return -1
+
+
+## "prod" vence tudo; depois "dev"; sem tag, segue o tipo de build.
+static func is_dev_environment(debug_build: bool, has_dev: bool, has_prod: bool) -> bool:
+	if has_prod:
+		return false
+	return has_dev or debug_build
 
 
 func _process(delta: float) -> void:

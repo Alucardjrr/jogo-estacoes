@@ -68,7 +68,7 @@
         "chuvas"
       ],
       "trust_cost": 0,
-      "cohesion_cost": 10,
+      "cohesion_cost": 15,
       "effects": [
         {
           "key": "health_drift",

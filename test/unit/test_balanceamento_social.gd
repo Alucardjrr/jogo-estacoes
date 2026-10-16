@@ -1,7 +1,9 @@
 extends GutTest
-## Regressão de balanceamento do Social (D-035..D-038; critérios do diretor). 10 sementes.
-## "Sempre certa" é medida contra os planos bons (por estação; com prédios): a linha de
-## base sem decisões não é um plano — nela as medidas de água ajudam, e isso é o contexto.
+## Regressão de balanceamento do Social (D-035..D-041; critérios do diretor). 10 sementes.
+## D-039: "sempre certa" é medida contra planos COM decisões (por estação; com prédios) —
+## uma política "usar X sempre que disponível" reprova se vencer o plano sem X em ≥ 7/10.
+## A linha de base passiva não é plano: nela as medidas de água ajudam, e isso é contexto
+## (valor dependente do estado), não estratégia dominante.
 
 const Run := preload("res://tools/balance/balance_run.gd")
 const P := preload("res://test/unit/test_balanceamento_predios.gd")
@@ -107,7 +109,13 @@ func test_d013_rega_cobra_nas_chuvas() -> void:
 
 
 func test_repetir_todo_ano_baixa_o_teto() -> void:
-	var r: Dictionary = Run.play(P._with_buildings(P.MIXED).merged(
-		{"measures": {"seca": "racionamento", "chuvas": "quarentena"}, "desperation": true}, true), 1, 5)
-	assert_between(r.social.trust_ceiling, 40.0, 90.0, "teto da fé após 5 anos")
-	assert_lt(r.social.trust_ceiling, 100.0)
+	# Alvo do designer/diretor: tetos entre 55 e 70 após 5 anos usando uma medida por estação.
+	var trust := 0.0
+	var coh := 0.0
+	for s in SEEDS:
+		var r: Dictionary = Run.play(P._with_buildings(P.MIXED).merged(
+			{"measures": {"seca": "racionamento", "chuvas": "quarentena"}, "desperation": true}, true), s + 1, 5)
+		trust += r.social.trust_ceiling
+		coh += r.social.cohesion_ceiling
+	assert_between(trust / SEEDS, 55.0, 70.0, "teto da fé")
+	assert_between(coh / SEEDS, 55.0, 70.0, "teto da vizinhança")

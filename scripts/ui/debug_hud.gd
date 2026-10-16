@@ -24,6 +24,9 @@ const LABOR_KEYS := {KEY_Q: ["water", 1], KEY_A: ["water", -1], KEY_W: ["farm", 
 ## Teclas da fila de obras (só debug). Id sem tecla não pode ser pedido por aqui.
 const BUILD_KEYS := {KEY_Z: "cisterna", KEY_X: "silo", KEY_C: "canteiro", KEY_V: "abrigo"}
 var _buildings_label := Label.new()
+var _social_label := Label.new()
+## Teclas das medidas, na ordem de social.json (4 = primeira).
+const MEASURE_KEYS := [KEY_4, KEY_5, KEY_6, KEY_7, KEY_8, KEY_9]
 var _help_label := Label.new()
 var _log_label := Label.new()
 var _pause_button := Button.new()
@@ -59,6 +62,8 @@ func _ready() -> void:
 	box.add_child(_labor_label)
 	_buildings_label.add_theme_font_size_override("font_size", 18)
 	box.add_child(_buildings_label)
+	_social_label.add_theme_font_size_override("font_size", 18)
+	box.add_child(_social_label)
 	_modifiers_label.modulate = Color(1, 1, 1, 0.6)
 	_modifiers_label.visible = Game.dev_mode  # detalhe interno: só em dev (D-029)
 	box.add_child(_modifiers_label)
@@ -108,6 +113,11 @@ func _unhandled_input(event: InputEvent) -> void:
 		_:
 			if LABOR_KEYS.has(event.keycode):
 				_adjust_labor(LABOR_KEYS[event.keycode][0], LABOR_KEYS[event.keycode][1])
+			elif MEASURE_KEYS.has(event.keycode):
+				var ids := Game.sim.social.measure_ids()
+				var i := MEASURE_KEYS.find(event.keycode)
+				if i < ids.size():
+					Game.enact_measure(ids[i])
 			elif BUILD_KEYS.has(event.keycode):
 				_pending_builds.append(BUILD_KEYS[event.keycode])
 				Game.build(BUILD_KEYS[event.keycode])
@@ -145,7 +155,8 @@ func _refresh_all() -> void:
 
 
 const LOGGED := ["season_changed", "year_changed", "death", "family_left", "colony_empty",
-	"diary", "speech", "build_queued", "building_completed", "command_rejected"]
+	"diary", "speech", "build_queued", "building_completed", "command_rejected",
+	"measure_enacted", "measure_expired", "meter_low"]
 
 
 func _on_day_passed(snapshot: Dictionary, events: Array[Dictionary]) -> void:
@@ -210,6 +221,7 @@ func _refresh(s: Dictionary) -> void:
 			label.modulate = Color.WHITE
 	_labor_label.text = labor_text(s.labor, _pending)
 	_buildings_label.text = _buildings_text(s)
+	_social_label.text = social_text(s)
 	var mods: PackedStringArray = []
 	for m in s.modifiers:
 		mods.append("%s %s" % [m.key, ("×%.2f" % m.mul) if m.mul != 1.0 else signed(m.add)])
@@ -278,6 +290,39 @@ func _buildings_text(s: Dictionary) -> String:
 	return text
 
 
+## Medidores e medidas disponíveis (custo atual, estado).
+func social_text(s: Dictionary) -> String:
+	var soc: Dictionary = s.social
+	var grudge := roundi(200.0 - soc.trust_ceiling - soc.cohesion_ceiling)
+	var text := tr("HUD_SOCIAL").format({"trust_name": tr("METER_TRUST"), "trust": roundi(soc.trust),
+		"trust_cap": roundi(soc.trust_ceiling), "cohesion_name": tr("METER_COHESION"),
+		"cohesion": roundi(soc.cohesion), "cohesion_cap": roundi(soc.cohesion_ceiling), "grudge": grudge})
+	var sim: Simulation = Game.sim
+	var ids := sim.social.measure_ids()
+	var shown := 0
+	for i in ids.size():
+		var id: String = ids[i]
+		var why := sim.social.check(id, s.season, s.year, sim.water_fraction())
+		if why == "wrong_season":
+			continue
+		shown += 1
+		var c := sim.social.cost(id)
+		var line := tr("HUD_MEASURE").format({"key": i + 4, "name": tr("MEASURE_" + id.to_upper()),
+			"desc": tr("MEASURE_" + id.to_upper() + "_DESC"), "trust": roundi(c.trust),
+			"cohesion": roundi(c.cohesion)})
+		if soc.active.has(id):
+			line += " " + tr("HUD_MEASURE_ACTIVE")
+		elif why == "locked":
+			line += " " + tr("HUD_MEASURE_LOCKED").format({
+				"pct": roundi(sim.data.section("social").measures[id].unlock_water_below * 100.0)})
+		elif why in ["already_enacted", "one_per_season"]:
+			line += " " + tr("HUD_MEASURE_USED")
+		text += "\n" + line
+	if shown == 0:
+		text += "\n" + tr("HUD_MEASURE_NONE")
+	return text
+
+
 ## Por que a obra parada não anda e o que fazer.
 func waiting_hint(b: Dictionary, lab: Dictionary) -> String:
 	if b.ruins_remaining <= 0.0:
@@ -337,6 +382,12 @@ func _render_log() -> void:
 			"building_completed":
 				lines.append(tr("EVENT_BUILDING_COMPLETED").format({
 					"name": tr("BUILDING_" + String(e.building).to_upper())}))
+			"measure_enacted":
+				lines.append(tr("EVENT_MEASURE_ENACTED").format({"name": tr("MEASURE_" + String(e.measure).to_upper())}))
+			"measure_expired":
+				lines.append(tr("EVENT_MEASURE_EXPIRED").format({"name": tr("MEASURE_" + String(e.measure).to_upper())}))
+			"meter_low":
+				lines.append(tr("EVENT_METER_LOW").format({"name": tr("METER_" + String(e.meter).to_upper())}))
 			"command_rejected":
 				lines.append(tr("EVENT_REJECTED") + " " + tr("REJECT_" + String(e.reason).to_upper()))
 			"speech":

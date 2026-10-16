@@ -65,7 +65,10 @@ func step(flow: Dictionary, modifiers: ModifierStack, rng: RandomNumberGenerator
 		_death_acc = 0.0  # saiu da zona de risco: fração pendente não "cobra" depois
 
 	# 3. Partida
-	if shortage_streak >= _cfg.departure_shortage_days and not families.is_empty():
+	# Coesão baixa (Social) encurta o prazo; nunca menos de 1 dia.
+	var departure_days := maxi(1, ceili(_cfg.departure_shortage_days
+		* modifiers.value("departure_days_mult", 1.0)))
+	if shortage_streak >= departure_days and not families.is_empty():
 		var i := rng.randi_range(0, families.size() - 1)
 		var f: Dictionary = families[i]
 		families.remove_at(i)

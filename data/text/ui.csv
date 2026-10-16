@@ -21,7 +21,7 @@ HUD_PAUSED,Pausado,Paused
 HUD_SPEED,Velocidade {speed}×,Speed {speed}×
 HUD_PAUSE_BUTTON,Pausar,Pause
 HUD_LANGUAGE,Idioma: Português,Language: English
-HUD_HELP,Espaço: pausar · 1/2/3: velocidade · L: idioma · Q/A água · W/S roça · E/D cuidado · R/F obras · T/G saque · Z cisterna · X silo · C canteiro · V abrigo,Space: pause · 1/2/3: speed · L: language · Q/A water · W/S farming · E/D care · R/F works · T/G salvage · Z cistern · X granary · C plots · V shelter
+HUD_HELP,Espaço: pausar · 1/2/3: velocidade · L: idioma · Q/A água · W/S roça · E/D cuidado · R/F obras · T/G saque · Z cisterna · X silo · C canteiro · V abrigo · 4–8 medidas,Space: pause · 1/2/3: speed · L: language · Q/A water · W/S farming · E/D care · R/F works · T/G salvage · Z cistern · X granary · C plots · V shelter · 4–8 measures
 HUD_DATA_ERROR,Erro nos dados de balanceamento:,Balance data error:
 EVENT_SEASON_CHANGED,"Começou: {season} (Ano {year})","Started: {season} (Year {year})"
 EVENT_YEAR_CHANGED,Ano {year} começou,Year {year} began
@@ -132,3 +132,39 @@ REJECT_NOT_INTEGER,o valor precisa ser inteiro,the value must be a whole number
 REJECT_NEGATIVE,o valor não pode ser negativo,the value cannot be negative
 REJECT_INVALID_BUILDING,prédio inválido,invalid building
 REJECT_QUEUE_FULL,a fila de obras está cheia,the building queue is full
+REACT_MEASURE_RACIONAMENTO_1,"{name}: A partilha é justa, mas a sede não quer saber de justiça.","{name}: The sharing is fair, but thirst does not care about fairness."
+REACT_MEASURE_RACIONAMENTO_2,"{name}: Beber menos hoje para todos beberem amanhã, eu só queria acreditar que a conta fecha.","{name}: Drink less today so everyone drinks tomorrow, I just wish I could believe the numbers hold."
+REACT_MEASURE_AGUA_NA_ROCA_1,"{name}: Tirar a água da boca para dar à roça, e depois quem explica isso às crianças?","{name}: Taking water from our mouths to give to the field, and who explains that to the children afterwards?"
+REACT_MEASURE_AGUA_NA_ROCA_2,"{name}: Se a roça pegar, comemos todos, mas já tem vizinho olhando torto para o meu balde.","{name}: If the field takes, we all eat, but a neighbor is already eyeing my bucket sideways."
+REACT_MEASURE_QUARENTENA_1,"{name}: Fechar a casa com febre é o certo, mas ninguém mais se cumprimenta por cima da cerca.","{name}: Shutting the house with fever is right, but no one greets anyone over the fence anymore."
+REACT_MEASURE_QUARENTENA_2,"{name}: Menos gente na roça e mais medo no terreiro, assim vai a chuva.","{name}: Fewer hands in the field and more fear in the yard, that is how the rain goes."
+REACT_MEASURE_MUTIRAO_1,"{name}: Todos nas obras de sol a sol, e o corpo já pergunta até quando.","{name}: Everyone on the works from sun to sun, and the body is already asking how long."
+REACT_MEASURE_MUTIRAO_2,"{name}: A obra vai ficar de pé, mas quem decidiu não carregou tijolo comigo.","{name}: The work will stand in the end, but whoever decided did not carry bricks beside me."
+REACT_MEASURE_CONFISCO_1,"{name}: Levaram a água que cada família guardou, e isso não se perdoa com um balde devolvido.","{name}: They took the water each family had saved, and that is not forgiven with a returned bucket."
+REACT_MEASURE_CONFISCO_2,"{name}: Matou a sede de hoje, mas deixou uma ferida que nem chuva lava.","{name}: It quenched today's thirst, but left a wound that not even rain can wash."
+MEASURE_RACIONAMENTO,Partilha da cisterna,Cistern sharing
+MEASURE_AGUA_NA_ROCA,Rega de socorro,Rescue watering
+MEASURE_QUARENTENA,Isolamento da casa,House isolation
+MEASURE_MUTIRAO,Mutirão,Work drive
+MEASURE_CONFISCO,Requisição da cisterna,Cistern requisition
+MEASURE_RACIONAMENTO_DESC,"água bebida ×0,6; saúde −0,25/dia","drinking water ×0.6; health −0.25/day"
+MEASURE_AGUA_NA_ROCA_DESC,"roça +0,3; gasta 10 de água/dia; depois: febre da água parada (saúde −0,2/dia por 30 dias)","farming +0.3; uses 10 water/day; then: standing-water fever (health −0.2/day for 30 days)"
+MEASURE_QUARENTENA_DESC,"saúde +0,5/dia; produtividade ×0,8","health +0.5/day; productivity ×0.8"
+MEASURE_MUTIRAO_DESC,"obras ×2; saúde −0,3/dia; depois: produtividade ×0,85 por 30 dias","works ×2; health −0.3/day; then: productivity ×0.85 for 30 days"
+MEASURE_CONFISCO_DESC,água na hora (12 dias de consumo); custo permanente,water now (12 days of use); permanent cost
+METER_TRUST,Fé na liderança,Faith in leadership
+METER_COHESION,Vizinhança,Neighborliness
+HUD_SOCIAL,"{trust_name} {trust}/{trust_cap} · {cohesion_name} {cohesion}/{cohesion_cap} · Mágoa acumulada {grudge}","{trust_name} {trust}/{trust_cap} · {cohesion_name} {cohesion}/{cohesion_cap} · Accumulated grievance {grudge}"
+HUD_MEASURE,"[{key}] {name} — {desc} — custo: fé −{trust}, vizinhança −{cohesion}","[{key}] {name} — {desc} — cost: faith −{trust}, neighborliness −{cohesion}"
+HUD_MEASURE_ACTIVE,(ativa até o fim da estação),(active until season ends)
+HUD_MEASURE_USED,(medida desta estação já escolhida),(this season's measure already chosen)
+HUD_MEASURE_LOCKED,(só com água abaixo de {pct}%),(only with water below {pct}%)
+HUD_MEASURE_NONE,Sem medidas para esta estação,No measures for this season
+EVENT_MEASURE_ENACTED,Medida: {name},Measure: {name}
+EVENT_MEASURE_EXPIRED,Medida encerrada: {name},Measure ended: {name}
+EVENT_METER_LOW,{name} está baixa: efeitos na colônia,{name} is low: effects on the settlement
+REJECT_INVALID_MEASURE,medida inválida,invalid measure
+REJECT_WRONG_SEASON,medida de outra estação,measure for another season
+REJECT_LOCKED,medida só liberada em desespero,measure only available in desperation
+REJECT_ALREADY_ENACTED,medida já ativada nesta estação,measure already enacted this season
+REJECT_ONE_PER_SEASON,só uma medida por estação,only one measure per season

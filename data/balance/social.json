@@ -1,0 +1,122 @@
+{
+  "trust_initial": 75,
+  "cohesion_initial": 75,
+  "recovery_per_day": 0.05,
+  "shortage_trust_per_day": 0.3,
+  "death_cohesion": 1,
+  "left_cohesion": 2,
+  "low_threshold": 30,
+  "trust_productivity": {
+    "full_at": 60,
+    "mid_at": 25,
+    "mid_mult": 0.9,
+    "zero_mult": 0.75
+  },
+  "cohesion_departure": {
+    "full_at": 60,
+    "mid_at": 25,
+    "mid_mult": 0.85,
+    "zero_mult": 0.6
+  },
+  "residual_fraction": 0.25,
+  "repeat_cost_increase": 0.5,
+  "one_per_season": true,
+  "measures": {
+    "racionamento": {
+      "seasons": [
+        "seca"
+      ],
+      "trust_cost": 15,
+      "cohesion_cost": 0,
+      "effects": [
+        {
+          "key": "water_consumption",
+          "mul": 0.6
+        },
+        {
+          "key": "health_drift",
+          "add": -0.25
+        }
+      ]
+    },
+    "agua_na_roca": {
+      "seasons": [
+        "seca"
+      ],
+      "trust_cost": 0,
+      "cohesion_cost": 15,
+      "effects": [
+        {
+          "key": "farm_mult",
+          "add": 0.3
+        },
+        {
+          "key": "water_consumption",
+          "add": 10
+        }
+      ],
+      "after_days": 30,
+      "after_effects": [
+        {
+          "key": "health_drift",
+          "add": -0.2
+        }
+      ]
+    },
+    "quarentena": {
+      "seasons": [
+        "chuvas"
+      ],
+      "trust_cost": 0,
+      "cohesion_cost": 10,
+      "effects": [
+        {
+          "key": "health_drift",
+          "add": 0.5
+        },
+        {
+          "key": "productivity_mult",
+          "mul": 0.8
+        }
+      ]
+    },
+    "mutirao": {
+      "seasons": [
+        "chuvas"
+      ],
+      "trust_cost": 10,
+      "cohesion_cost": 0,
+      "effects": [
+        {
+          "key": "build_mult",
+          "mul": 2.0
+        },
+        {
+          "key": "health_drift",
+          "add": -0.1
+        },
+        {
+          "key": "salvage_mult",
+          "mul": 2.0
+        }
+      ],
+      "after_days": 15,
+      "after_effects": [
+        {
+          "key": "productivity_mult",
+          "mul": 0.9
+        }
+      ]
+    },
+    "confisco": {
+      "seasons": [],
+      "trust_cost": 25,
+      "cohesion_cost": 10,
+      "full_residual": true,
+      "exempt_one_per_season": true,
+      "unlock_water_below": 0.1,
+      "instant_water_days": 25,
+      "effects": []
+    }
+  }
+}

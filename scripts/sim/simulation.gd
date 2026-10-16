@@ -10,6 +10,7 @@ extends RefCounted
 ##   {"type": "set_labor", "task": "water"|"farm"|"care", "value": int ≥ 0}
 ##   {"type": "adjust_labor", "task": ..., "delta": int} — soma ao pedido atual
 ##   {"type": "build", "building": id} — põe na fila de obras
+##   {"type": "enact_measure", "measure": id} — ativa medida social (GDD 6)
 ## Recusados viram evento "command_rejected" com o motivo; aceitos, "labor_changed"
 ## ou "build_queued".
 
@@ -22,6 +23,7 @@ var population: SimPopulation
 var labor: SimLabor
 var buildings: SimBuildings
 var narrative: SimNarrative
+var social: SimSocial
 var modifiers := ModifierStack.new()
 
 var _events: Array[Dictionary] = []
@@ -43,7 +45,9 @@ func setup(seed_number: int = -1, data_dir: String = DataRegistry.DEFAULT_DIR) -
 	labor = SimLabor.new(data.section("labor"))
 	buildings = SimBuildings.new(data.section("buildings"))
 	narrative = SimNarrative.new(data.section("narrative"))
+	social = SimSocial.new(data.section("social"))
 	season.publish(calendar, modifiers)  # tela já mostra as taxas do dia 1
+	social.publish(calendar.season_id(), calendar.year(), modifiers)
 	labor.step(population.people(), population.health, modifiers)
 	_events.clear()
 	return true
@@ -66,7 +70,9 @@ func step_day() -> void:
 	_events.append_array(calendar.advance())
 	# 2. Season publica as taxas do dia
 	season.publish(calendar, modifiers)
-	# 3..4: Forecast, Social — próximas etapas.
+	# 3: Forecast — próxima etapa.
+	# 4. Social publica medidas ativas e curvas dos medidores
+	_events.append_array(social.publish(calendar.season_id(), calendar.year(), modifiers))
 	# 5a. Efeitos dos prédios (estação de hoje; condição e falta de água de ontem),
 	#     antes de Labor, que lê farm_mult/gather_mult
 	buildings.publish_effects(calendar.season_id(), resources.last_flow.water.deficit > 0.0, modifiers)
@@ -78,7 +84,12 @@ func step_day() -> void:
 	_events.append_array(resources.step(population.people(), modifiers))
 	# 8. Population (lê o déficit do dia em Resources)
 	_events.append_array(population.step(resources.last_flow, modifiers, loop.rng))
-	# 9: Social — próxima etapa.
+	# 9. Social: medidores reagem ao dia
+	var today := _events.slice(first_event)
+	_events.append_array(social.update(
+		resources.last_flow.water.deficit > 0.0 or resources.last_flow.food.deficit > 0.0,
+		today.filter(func(e: Dictionary) -> bool: return e.type == "death").size(),
+		today.filter(func(e: Dictionary) -> bool: return e.type == "family_left").size()))
 	# 10. Narrative: lê os eventos do dia e acrescenta diário/falas
 	_events.append_array(narrative.step(calendar.day_index, calendar.year(),
 		population.people(), _events.slice(first_event)))
@@ -115,6 +126,7 @@ func snapshot() -> Dictionary:
 		"shortage_streak": population.shortage_streak,
 		"labor": labor.snapshot(),
 		"buildings": buildings.snapshot(),
+		"social": social.snapshot(),
 		"resources": _resources_snapshot(),
 		"modifiers": modifiers.entries(),
 		"seed": loop.seed_value,
@@ -128,6 +140,7 @@ func _modifier_keys() -> PackedStringArray:
 	for id in DataRegistry.RESOURCE_IDS:
 		keys.append(id + "_consumption")
 		keys.append(id + "_capacity")
+	keys.append_array(["productivity_mult", "build_mult", "salvage_mult", "departure_days_mult"])
 	return keys
 
 
@@ -144,6 +157,8 @@ func _apply_command(command: Dictionary) -> void:
 	match command.type:
 		"set_labor", "adjust_labor":
 			_apply_labor(command)
+		"enact_measure":
+			_apply_measure(command)
 		"build":
 			var id: Variant = command.get("building")
 			if not id is String or not buildings.is_buildable(id):
@@ -156,6 +171,30 @@ func _apply_command(command: Dictionary) -> void:
 					"position": buildings.queue.size(), "max": int(data.section("buildings").max_queue)})
 		_:
 			_reject(command, "unknown_type")
+
+
+func _apply_measure(command: Dictionary) -> void:
+	var id: Variant = command.get("measure")
+	if not id is String:
+		_reject(command, "invalid_measure")
+		return
+	var why := social.check(id, calendar.season_id(), calendar.year(), water_fraction())
+	if why != "":
+		_reject(command, why)
+		return
+	var ev := social.enact(id, calendar.season_id(), calendar.year())
+	var gain := social.instant_water(id, population.people())
+	if gain > 0.0:
+		var before: float = resources.stock.water
+		resources.stock.water = minf(before + gain, resources.capacity("water"))
+		ev.water = resources.stock.water - before
+	_events.append(ev)
+
+
+## Fração da capacidade de água (para medidas de desespero).
+func water_fraction() -> float:
+	var cap := resources.capacity("water")
+	return resources.stock.water / cap if cap > 0.0 else 0.0
 
 
 func _apply_labor(command: Dictionary) -> void:
@@ -181,7 +220,8 @@ func _apply_labor(command: Dictionary) -> void:
 ## Motivos são códigos (texto de jogador fica no CSV, D-024): a tela traduz
 ## REJECT_<MOTIVO>. Lista completa em REJECT_REASONS.
 const REJECT_REASONS: PackedStringArray = ["unknown_type", "invalid_task", "not_integer",
-	"negative", "invalid_building", "queue_full"]
+	"negative", "invalid_building", "queue_full", "invalid_measure", "wrong_season", "locked",
+	"already_enacted", "one_per_season"]
 
 
 func _reject(command: Dictionary, reason: String) -> void:

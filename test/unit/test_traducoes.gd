@@ -67,6 +67,8 @@ func test_chaves_dinamicas_dos_dados_existem() -> void:
 		assert_true(_rows.has("SEASON_" + season.id.to_upper()), "falta SEASON_%s" % season.id.to_upper())
 	for id in DataRegistry.RESOURCE_IDS:
 		assert_true(_rows.has("RESOURCE_" + id.to_upper()), "falta RESOURCE_%s" % id.to_upper())
+	for id in reg.section("buildings").types:
+		assert_true(_rows.has("BUILDING_" + id.to_upper()), "falta BUILDING_%s" % id.to_upper())
 
 
 func test_traducao_carregada_no_jogo() -> void:

@@ -1,5 +1,5 @@
 {
-  "intensity_per_year": 0.18,
+  "intensity_per_year": 0.3,
   "intensity_max": 2.0,
   "transition_days": 20,
   "seasons": {

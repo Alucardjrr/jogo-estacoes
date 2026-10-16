@@ -21,7 +21,7 @@ HUD_PAUSED,Pausado,Paused
 HUD_SPEED,Velocidade {speed}×,Speed {speed}×
 HUD_PAUSE_BUTTON,Pausar,Pause
 HUD_LANGUAGE,Idioma: Português,Language: English
-HUD_HELP,Espaço: pausar · 1/2/3: velocidade · L: idioma · Q/A água · W/S roça · E/D cuidado,Space: pause · 1/2/3: speed · L: language · Q/A water · W/S farming · E/D care
+HUD_HELP,Espaço: pausar · 1/2/3: velocidade · L: idioma · Q/A água · W/S roça · E/D cuidado · R/F obras · T/G saque · Z cisterna · X silo · C canteiro · V abrigo,Space: pause · 1/2/3: speed · L: language · Q/A water · W/S farming · E/D care · R/F works · T/G salvage · Z cistern · X granary · C plots · V shelter
 HUD_DATA_ERROR,Erro nos dados de balanceamento:,Balance data error:
 EVENT_SEASON_CHANGED,"Começou: {season} (Ano {year})","Started: {season} (Year {year})"
 EVENT_YEAR_CHANGED,Ano {year} começou,Year {year} began
@@ -36,7 +36,17 @@ HUD_MODIFIERS,Modificadores:,Modifiers:
 EVENT_DEATH,Uma pessoa da família {family} morreu,A member of family {family} died
 EVENT_FAMILY_LEFT,A família {family} foi embora (pessoas: {size}),Family {family} left (people: {size})
 EVENT_COLONY_EMPTY,O assentamento ficou vazio,The settlement is empty
-HUD_LABOR,"Trabalho ({workers}): Água {water} · Roça {farm} · Cuidado {care} · Livres {idle} · Produtividade {productivity}%","Work ({workers}): Water {water} · Farming {farm} · Care {care} · Free {idle} · Productivity {productivity}%"
+HUD_LABOR,"Trabalho ({workers}): Água {water} · Roça {farm} · Cuidado {care} · Obras {build} · Saque {salvage} · Livres {idle} · Produtividade {productivity}%","Work ({workers}): Water {water} · Farming {farm} · Care {care} · Works {build} · Salvage {salvage} · Free {idle} · Productivity {productivity}%"
 HUD_LABOR_INITIAL,(distribuição inicial),(starting assignment)
 HUD_DAYS_LEFT,dura {days} dias,lasts {days} days
 HUD_STABLE,estável,stable
+HUD_BUILDINGS,Prédios:,Buildings:
+HUD_BUILDING,"{name} ×{count} ({condition}% → {end}% sem reparo)","{name} ×{count} ({condition}% → {end}% unrepaired)"
+HUD_MATERIALS,Materiais {materials} · Ruínas {ruins}/{ruins_total},Materials {materials} · Ruins {ruins}/{ruins_total}
+HUD_QUEUE_WORKING,"Obra: {name} {progress}/{cost} (fila: {queued})","Building: {name} {progress}/{cost} (queue: {queued})"
+HUD_QUEUE_WAITING,"Obra: {name} esperando {materials} materiais (fila: {queued})","Building: {name} waiting for {materials} materials (queue: {queued})"
+BUILDING_CISTERNA,Cisterna,Cistern
+BUILDING_SILO,Silo,Granary
+BUILDING_CANTEIRO,Canteiro irrigado,Irrigated plots
+BUILDING_ABRIGO,Abrigo com drenagem,Drained shelter
+BUILDING_RUINAS,Ruínas,Ruins

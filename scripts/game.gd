@@ -64,6 +64,12 @@ func adjust_labor(task: String, delta: int) -> void:
 		sim.enqueue({"type": "adjust_labor", "task": task, "delta": delta})
 
 
+## Põe um prédio na fila de obras (vale no próximo dia simulado).
+func build(building: String) -> void:
+	if ready_ok:
+		sim.enqueue({"type": "build", "building": building})
+
+
 func speeds() -> Array:
 	return sim.data.section("sim").get("speeds", [1])
 

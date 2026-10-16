@@ -9,6 +9,8 @@ extends RefCounted
 ##   {}                                   → distribuição inicial dos dados (linha de base)
 ##   {"fixed": {"water": 6, "farm": 21, "care": 3}}
 ##   {"by_season": {"seca": {...}, "janela_1": {...}, ...}}  → aplicada no início de cada estação
+##   {"by_year": {1: {by_season...}, 2: {...}}}  → plano por estação de cada ano (o último vale para os seguintes)
+##   + opcional "builds": ["cisterna", "silo", ...] → postos na fila de obras no dia 1
 ## A troca entra pela fila de comandos, como o jogador faria (vale no dia seguinte).
 
 
@@ -20,7 +22,14 @@ static func play(strategy: Dictionary, seed_number: int, years: int,
 	var days: int = sim.calendar.days_per_year() * years
 	var out := {"deaths": 0, "left": 0, "shortage_days": 0, "health_min": sim.population.health,
 		"population_by_year": [], "rejected": 0}
-	_apply(sim, strategy, sim.calendar.season_id())
+	_apply(sim, strategy, sim.calendar.season_id(), 1)
+	for b in strategy.get("builds", []):
+		sim.enqueue({"type": "build", "building": b})
+	out.built = 0
+	out.repair_by_season = {}
+	out.wear_by_season = {}
+	out.building_water_by_season = {}
+	out.water_deficit_by_season = {}
 	for _d in days:
 		sim.step_day()
 		var short := false
@@ -30,9 +39,20 @@ static func play(strategy: Dictionary, seed_number: int, years: int,
 				"family_left": out.left += e.size
 				"shortage": short = true
 				"command_rejected": out.rejected += 1
-				"season_changed": _apply(sim, strategy, e.to)
+				"season_changed": _apply(sim, strategy, e.to, e.year)
+				"building_completed": out.built += 1
 		if short:
 			out.shortage_days += 1
+		var sid := sim.calendar.season_id()
+		out.repair_by_season[sid] = out.repair_by_season.get(sid, 0.0) + sim.buildings.last_repair_points
+		out.wear_by_season[sid] = out.wear_by_season.get(sid, 0.0) + sim.buildings.last_wear_points
+		var bw := 0.0
+		for m in sim.modifiers.entries():
+			if m.key == "water_consumption" and m.source == SimBuildings.SOURCE:
+				bw += m.add
+		out.building_water_by_season[sid] = out.building_water_by_season.get(sid, 0.0) + bw
+		out.water_deficit_by_season[sid] = out.water_deficit_by_season.get(sid, 0.0) \
+			+ sim.resources.last_flow.water.deficit
 		out.health_min = minf(out.health_min, sim.population.health)
 		if sim.calendar.day_index % sim.calendar.days_per_year() == 0:
 			out.population_by_year.append(sim.population.people())
@@ -67,11 +87,16 @@ static func summary(strategy: Dictionary, seeds: int, years: int,
 		"left": float(left) / seeds, "by_year": by_year}
 
 
-static func _apply(sim: Simulation, strategy: Dictionary, season_id: String) -> void:
+static func _apply(sim: Simulation, strategy: Dictionary, season_id: String, year: int) -> void:
 	var alloc: Dictionary = {}
 	if strategy.has("fixed"):
 		alloc = strategy.fixed
 	elif strategy.has("by_season"):
 		alloc = strategy.by_season.get(season_id, {})
+	elif strategy.has("by_year"):
+		var y := year
+		while y > 1 and not strategy.by_year.has(y):
+			y -= 1
+		alloc = strategy.by_year.get(y, {}).get(season_id, {})
 	for task in alloc:
 		sim.enqueue({"type": "set_labor", "task": task, "value": alloc[task]})

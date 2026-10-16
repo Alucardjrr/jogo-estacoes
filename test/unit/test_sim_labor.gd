@@ -5,7 +5,7 @@ extends GutTest
 const CFG := {"worker_share": 0.6, "full_productivity_health": 60.0, "min_productivity": 0.5,
 	"water_per_worker": 2.5, "food_per_worker": 3.5, "care_health_per_share": 10.0,
 	"care_health_max": 2.0, "fatigue_threshold": 0.5, "fatigue_health": 0.4,
-	"initial_allocation": {"water": 9, "farm": 18, "care": 3}}
+	"initial_allocation": {"water": 9, "farm": 18, "care": 3, "build": 0, "salvage": 0}}
 
 
 func _mods(gather: float = 1.0, farm: float = 1.0) -> ModifierStack:
@@ -57,7 +57,7 @@ func test_corte_proporcional_quando_falta_gente() -> void:
 
 
 func test_ociosos() -> void:
-	var l := _lab({"water": 5, "farm": 5, "care": 0})
+	var l := _lab({"water": 5, "farm": 5, "care": 0, "build": 0, "salvage": 0})
 	l.step(50, 100.0, _mods())
 	assert_eq(l.idle(), 20.0)
 
@@ -168,7 +168,7 @@ func test_comandos_invalidos_recusados() -> void:
 	s.step_day()
 	var events := s.drain_events()
 	assert_eq(_types(events).count("command_rejected"), 7)
-	assert_eq(s.labor.desired, {"water": 9, "farm": 18, "care": 3})
+	assert_eq(s.labor.desired, {"water": 9, "farm": 18, "care": 3, "build": 0, "salvage": 0})
 	assert_false(s.labor.changed)
 
 

@@ -25,7 +25,17 @@ const POP_OK := {"families": [{"id": "f01", "size": 5}, {"id": "f02", "size": 3}
 const LAB_OK := {"worker_share": 0.6, "full_productivity_health": 60, "min_productivity": 0.5,
 	"water_per_worker": 2.5, "food_per_worker": 3.5, "care_health_per_share": 10,
 	"care_health_max": 2.0, "fatigue_threshold": 0.5, "fatigue_health": 0.4,
-	"initial_allocation": {"water": 9, "farm": 18, "care": 3}}
+	"initial_allocation": {"water": 9, "farm": 18, "care": 3, "build": 0, "salvage": 0}}
+const SEASONS_2 := {"seca": 0.1, "chuvas": 0.3}
+const BLD_OK := {"work_points_per_worker": 1.0, "points_per_condition": 2.0,
+	"low_condition_threshold": 60, "low_condition_wear_mult": 1.5,
+	"repair_cost_mult": {"seca": 1.0, "chuvas": 1.0}, "salvage_per_worker": 1.0,
+	"salvage_fatigue": 2.0, "max_queue": 5, "types": {
+		"ruinas": {"ruins": true, "materials": 800},
+		"cisterna": {"cost_materials": 120, "cost_points": 60, "wear": SEASONS_2,
+			"effects": [{"key": "water_capacity", "add": 1500}]},
+		"silo": {"cost_materials": 100, "cost_points": 50, "wear": SEASONS_2,
+			"effects": [{"key": "food_loss_rate", "mul": 0.7, "seasons": ["chuvas"]}]}}}
 
 
 func before_each() -> void:
@@ -45,13 +55,15 @@ func _write(name: String, content: Variant) -> void:
 
 
 func _load_with(sim: Variant, cal: Variant, season: Variant = SEASON_OK,
-		res: Variant = RES_OK, pop: Variant = POP_OK, lab: Variant = LAB_OK) -> DataRegistry:
+		res: Variant = RES_OK, pop: Variant = POP_OK, lab: Variant = LAB_OK,
+		bld: Variant = BLD_OK) -> DataRegistry:
 	_write("sim.json", sim)
 	_write("calendar.json", cal)
 	_write("season.json", season)
 	_write("resources.json", res)
 	_write("population.json", pop)
 	_write("labor.json", lab)
+	_write("buildings.json", bld)
 	var reg := DataRegistry.new()
 	reg.load_all(TMP_DIR)
 	return reg
@@ -319,7 +331,7 @@ func test_labor_valida_e_normaliza() -> void:
 
 func test_labor_alocacao_invalida() -> void:
 	var lab := LAB_OK.duplicate(true)
-	lab.initial_allocation = {"water": -1, "farm": 2.5, "pesca": 3}
+	lab.initial_allocation = {"water": -1, "farm": 2.5, "pesca": 3, "build": 0, "salvage": 0}
 	var reg := _load_with(SIM_OK, CAL_OK, SEASON_OK, RES_OK, POP_OK, lab)
 	assert_false(reg.is_loaded())
 	assert_true(_has_error(reg, "water: -1 fora da faixa"))
@@ -337,3 +349,48 @@ func test_labor_faixas() -> void:
 	assert_true(_has_error(reg, "worker_share = 1.5"))
 	assert_true(_has_error(reg, "fatigue_threshold = 1"))
 	assert_true(_has_error(reg, "full_productivity_health = 0"))
+
+
+# --- buildings.json ---
+
+func _bld_errors(bld: Dictionary) -> DataRegistry:
+	return _load_with(SIM_OK, CAL_OK, SEASON_OK, RES_OK, POP_OK, LAB_OK, bld)
+
+
+func test_buildings_valido() -> void:
+	var reg := _bld_errors(BLD_OK)
+	assert_true(reg.is_loaded(), "erros: %s" % [reg.errors])
+	assert_true(reg.section("buildings").types.ruinas.ruins)
+	assert_eq(reg.section("buildings").types.silo.effects[0].seasons, ["chuvas"])
+
+
+func test_buildings_desgaste_precisa_das_estacoes_do_calendario() -> void:
+	var bld := BLD_OK.duplicate(true)
+	bld.types.cisterna.wear = {"seca": 0.1, "inverno": 0.2}
+	var reg := _bld_errors(bld)
+	assert_true(_has_error(reg, "falta a chave 'chuvas'"))
+	assert_true(_has_error(reg, "chave desconhecida 'inverno'"))
+
+
+func test_buildings_efeito_invalido() -> void:
+	var bld := BLD_OK.duplicate(true)
+	bld.types.cisterna.effects = [{"key": "ouro", "add": 1}, {"key": "farm_mult"},
+		{"key": "farm_mult", "add": 1, "mul": 2}, {"key": "farm_mult", "add": 1, "seasons": ["neve"]},
+		{"key": "farm_mult", "add": 1, "extra": true}]
+	var reg := _bld_errors(bld)
+	assert_true(_has_error(reg, "key inválida 'ouro'"))
+	assert_true(_has_error(reg, "effects[1]: precisa de add ou mul"))
+	assert_true(_has_error(reg, "effects[2]: precisa de add ou mul"))
+	assert_true(_has_error(reg, "estação 'neve' não existe"))
+	assert_true(_has_error(reg, "chave desconhecida 'extra'"))
+
+
+func test_buildings_ruinas_e_custos() -> void:
+	var bld := BLD_OK.duplicate(true)
+	bld.types.ruinas["cost_points"] = 3
+	bld.types.silo.cost_points = 0
+	bld.max_queue = 0
+	var reg := _bld_errors(bld)
+	assert_true(_has_error(reg, "types.ruinas: chave desconhecida 'cost_points'"))
+	assert_true(_has_error(reg, "cost_points = 0"))
+	assert_true(_has_error(reg, "max_queue: 0 fora da faixa"))

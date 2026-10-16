@@ -38,3 +38,10 @@ func test_teclas_de_jogo_ignoradas_com_erro() -> void:
 	ev.pressed = true
 	hud._unhandled_input(ev)
 	assert_eq(Game.paused, paused_before, "sem dados válidos, espaço não faz nada")
+
+
+func test_dias_restantes() -> void:
+	var Hud := load("res://scripts/ui/debug_hud.gd")
+	assert_eq(Hud.days_left(100.0, -10.0), 10)
+	assert_eq(Hud.days_left(4.0, -10.0), 1, "menos de 1 dia ainda mostra 1")
+	assert_eq(Hud.days_left(0.0, -10.0), 0)

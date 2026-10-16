@@ -169,8 +169,8 @@ func _refresh(s: Dictionary) -> void:
 			"stock": roundi(r.stock), "capacity": roundi(r.capacity),
 			"inflow": _num(r.inflow), "consumed": _num(r.consumed), "lost": _num(r.lost)})
 		var net: float = r.inflow - r.demand - r.lost
-		if net < 0.0 and r.stock > 0.0:
-			label.text += "  " + tr("HUD_DAYS_LEFT").format({"days": int(r.stock / -net)})
+		if net < 0.0:
+			label.text += "  " + tr("HUD_DAYS_LEFT").format({"days": days_left(r.stock, net)})
 		else:
 			label.text += "  " + tr("HUD_STABLE")
 		if r.overflow > 0.0:
@@ -195,6 +195,14 @@ func _refresh(s: Dictionary) -> void:
 	for m in s.modifiers:
 		mods.append("%s %s" % [m.key, ("×%.2f" % m.mul) if m.mul != 1.0 else "+" + _num(m.add)])
 	_modifiers_label.text = tr("HUD_MODIFIERS") + " " + " · ".join(mods)
+
+
+## Dias até o estoque acabar com o saldo diário `net` (< 0). Arredonda para cima:
+## 0,4 dia de estoque ainda é "1 dia"; estoque zerado é 0.
+static func days_left(stock: float, net: float) -> int:
+	if stock <= 0.0:
+		return 0
+	return ceili(stock / -net)
 
 
 ## Número curto para a tela: inteiro se >= 10, 1 casa se >= 0,1, senão 4 casas (taxas).

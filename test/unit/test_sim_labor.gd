@@ -177,3 +177,31 @@ func test_valor_inteiro_vindo_como_float_e_aceito() -> void:
 	s.enqueue({"type": "set_labor", "task": "care", "value": 6.0})  # JSON/replay
 	s.step_day()
 	assert_eq(s.labor.desired.care, 6)
+
+
+func test_adjust_labor_float_inteiro_e_valores_estranhos() -> void:
+	var s := _sim()
+	s.enqueue({"type": "adjust_labor", "task": "care", "delta": 2.0})
+	s.enqueue({"type": "adjust_labor", "task": "care", "delta": NAN})
+	s.enqueue({"type": "adjust_labor", "task": "care", "delta": INF})
+	s.step_day()
+	assert_eq(s.labor.desired.care, 5)
+	assert_eq(_types(s.drain_events()).count("command_rejected"), 2)
+
+
+func test_set_labor_zero_e_aceito() -> void:
+	var s := _sim()
+	s.enqueue({"type": "set_labor", "task": "water", "value": 0})
+	s.step_day()
+	assert_eq(s.labor.desired.water, 0)
+
+
+func test_labor_le_estado_do_fim_do_dia_anterior() -> void:
+	# Se a população cair hoje, a produção de hoje ainda usa os trabalhadores de ontem.
+	var s := _sim()
+	s.step_day()
+	var before: int = s.labor.workers
+	s.population.families.clear()  # todos saem "durante" o dia seguinte, depois do Labor
+	s.step_day()
+	assert_eq(s.labor.workers, 0, "Labor do novo dia já vê a colônia vazia")
+	assert_eq(before, 30)

@@ -36,17 +36,27 @@ func _init() -> void:
 			"data":
 				opt.data = kv[1]
 			"fixed":
-				strategies["fixa " + kv[1]] = {"fixed": _triple(kv[1])}
+				var t := _triple(kv[1] if kv.size() > 1 else "")
+				if t.is_empty():
+					_fail("--fixed precisa ser água/roça/cuidado, ex.: --fixed=9/18/3")
+					return
+				strategies["fixa " + kv[1]] = {"fixed": t}
 			"plan":
 				var plan := {}
-				for part in kv[1].split(","):
+				for part in (kv[1] if kv.size() > 1 else "").split(","):
 					var p := part.split(":")
-					plan[p[0]] = _triple(p[1])
+					var t := _triple(p[1]) if p.size() == 2 else {}
+					if t.is_empty():
+						_fail("--plan precisa ser estação:a/r/c separados por vírgula")
+						return
+					plan[p[0]] = t
 				strategies["plano"] = {"by_season": plan}
 			"search":
 				search = true
 	if search:
 		_search(opt)
+		if _failed:
+			return
 	else:
 		if strategies.is_empty():
 			strategies = REFERENCE
@@ -76,6 +86,21 @@ func _search(opt: Dictionary) -> void:
 		print("  %s  %.1f" % [best[i][1], best[i][0]])
 
 
+var _failed := false
+
+
+func _fail(message: String) -> void:
+	printerr(message)
+	_failed = true
+	quit(1)
+
+
+## "9/18/3" → {water, farm, care}; formato inválido → {}.
 static func _triple(text: String) -> Dictionary:
 	var p := text.split("/")
+	if p.size() != 3:
+		return {}
+	for x in p:
+		if not x.is_valid_int() or x.to_int() < 0:
+			return {}
 	return {"water": p[0].to_int(), "farm": p[1].to_int(), "care": p[2].to_int()}

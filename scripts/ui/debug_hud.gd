@@ -44,6 +44,7 @@ func _ready() -> void:
 		_resource_labels[id] = l
 		box.add_child(l)
 	_modifiers_label.modulate = Color(1, 1, 1, 0.6)
+	_modifiers_label.visible = Game.dev_mode  # detalhe interno: só em dev (D-029)
 	box.add_child(_modifiers_label)
 	box.add_child(_status_label)
 

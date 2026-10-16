@@ -26,6 +26,7 @@ func setup(seed_number: int = -1, data_dir: String = DataRegistry.DEFAULT_DIR) -
 	season = SimSeason.new(data.section("season"))
 	resources = SimResources.new(data.section("resources"))
 	modifiers = ModifierStack.new()
+	modifiers.register_keys(_modifier_keys())
 	population = SimPopulation.new(data.section("population"))
 	season.publish(calendar, modifiers)  # tela já mostra as taxas do dia 1
 	_events.clear()
@@ -90,6 +91,14 @@ func snapshot() -> Dictionary:
 		"seed": loop.seed_value,
 		"rng_state": loop.rng.state,
 	}
+
+
+## Todas as chaves que algum sistema publica ou lê.
+func _modifier_keys() -> PackedStringArray:
+	var keys := DataRegistry.SEASON_KEYS.duplicate()
+	for id in DataRegistry.RESOURCE_IDS:
+		keys.append(id + "_consumption")
+	return keys
 
 
 func _resources_snapshot() -> Dictionary:

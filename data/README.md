@@ -71,12 +71,28 @@ frações por dia (0,004 = 0,4% do estoque por dia).
 | `care_health_max` | número | 0–100 | Teto do ganho de saúde pelo cuidado |
 | `fatigue_threshold` | número | 0–0,99 | Fração da força buscando água a partir da qual há fadiga |
 | `fatigue_health` | número | 0–100 | Perda de saúde/dia com 100% da força na água (proporcional ao excesso) |
-| `initial_allocation` | objeto | `water`, `farm`, `care` inteiros ≥ 0 | Distribuição inicial (linha de base sem jogador) |
+| `initial_allocation` | objeto | `water`, `farm`, `care`, `build`, `salvage` inteiros ≥ 0 | Distribuição inicial (linha de base sem jogador: obras e saque em 0) |
+
+## balance/buildings.json — prédios e ruínas (D-032)
+| Campo | Tipo | Faixa | O que é |
+|---|---|---|---|
+| `work_points_per_worker` | número | 0–1000 | Pontos de obra por trabalhador de obras por dia (× produtividade) |
+| `points_per_condition` | número | 0–1000 | Pontos para recuperar 1% de condição |
+| `low_condition_threshold` / `low_condition_wear_mult` | número | 0–100 / 0–10 | Abaixo do limiar, o desgaste é multiplicado |
+| `repair_cost_mult` | {estação: número} | todas as estações | Multiplicador do custo de reparo (janelas mais baratas) |
+| `salvage_per_worker` | número | 0–1000 | Materiais por trabalhador de saque por dia, × fração restante das ruínas |
+| `salvage_fatigue` | número | 0–100 | Saúde/dia perdida = isto × fração da força no saque × fração já esgotada |
+| `max_queue` | inteiro | 1–100 | Tamanho máximo da fila de obras |
+| `types.<id>` com `ruins: true` | objeto | `materials` | Ruínas: estoque finito de materiais |
+| `types.<id>.cost_materials` / `.cost_points` | número | ≥ 0 / > 0 | Custo (materiais reservados ao começar a obra) |
+| `types.<id>.wear` | {estação: número} | todas as estações | Condição perdida por dia (%) |
+| `types.<id>.effects[]` | lista | — | `{key, add \| mul, seasons?, requires_water?}`; efeito × condição/100; `key` em `DataRegistry.BUILDING_EFFECT_KEYS` |
 
 ## Runner de balanceamento
 `godot --headless --path . -s tools/balance_runner.gd -- --seeds=10 --years=3` roda as
 estratégias de referência. Opções no cabeçalho de `tools/balance_runner.gd`
-(`--fixed=`, `--plan=`, `--search`, `--data=` para testar números em outra pasta).
+(`--fixed=`, `--plan=`, `--builds=`, `--search`, `--data=` para testar números em outra pasta).
+Estratégias em código (`tools/balance/balance_run.gd`) aceitam também `by_year` (plano por ano).
 `test/unit/test_balanceamento.gd` trava a curva de dificuldade e o critério D-013.
 
 ## text/*.csv — textos (D-024)

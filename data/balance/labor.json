@@ -11,6 +11,8 @@
   "initial_allocation": {
     "water": 9,
     "farm": 18,
-    "care": 3
+    "care": 3,
+    "build": 0,
+    "salvage": 0
   }
 }

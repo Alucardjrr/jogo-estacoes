@@ -17,7 +17,11 @@ var _labor_label := Label.new()
 var _pending := {}
 var _last_snapshot := {}
 const LABOR_KEYS := {KEY_Q: ["water", 1], KEY_A: ["water", -1], KEY_W: ["farm", 1],
-	KEY_S: ["farm", -1], KEY_E: ["care", 1], KEY_D: ["care", -1]}
+	KEY_S: ["farm", -1], KEY_E: ["care", 1], KEY_D: ["care", -1], KEY_R: ["build", 1],
+	KEY_F: ["build", -1], KEY_T: ["salvage", 1], KEY_G: ["salvage", -1]}
+## Teclas da fila de obras (só debug). Id sem tecla não pode ser pedido por aqui.
+const BUILD_KEYS := {KEY_Z: "cisterna", KEY_X: "silo", KEY_C: "canteiro", KEY_V: "abrigo"}
+var _buildings_label := Label.new()
 var _help_label := Label.new()
 var _log_label := Label.new()
 var _pause_button := Button.new()
@@ -51,6 +55,8 @@ func _ready() -> void:
 		box.add_child(l)
 	_labor_label.add_theme_font_size_override("font_size", 20)
 	box.add_child(_labor_label)
+	_buildings_label.add_theme_font_size_override("font_size", 18)
+	box.add_child(_buildings_label)
 	_modifiers_label.modulate = Color(1, 1, 1, 0.6)
 	_modifiers_label.visible = Game.dev_mode  # detalhe interno: só em dev (D-029)
 	box.add_child(_modifiers_label)
@@ -100,6 +106,8 @@ func _unhandled_input(event: InputEvent) -> void:
 		_:
 			if LABOR_KEYS.has(event.keycode):
 				_adjust_labor(LABOR_KEYS[event.keycode][0], LABOR_KEYS[event.keycode][1])
+			elif BUILD_KEYS.has(event.keycode):
+				Game.build(BUILD_KEYS[event.keycode])
 
 
 func _adjust_labor(task: String, delta: int) -> void:
@@ -187,14 +195,46 @@ func _refresh(s: Dictionary) -> void:
 	for id in DataRegistry.TASK_IDS:
 		shown[id] = lab.desired[id] + _pending.get(id, 0)
 	_labor_label.text = tr("HUD_LABOR").format({"water": shown.water, "farm": shown.farm,
-		"care": shown.care, "idle": roundi(lab.idle), "workers": lab.workers,
+		"care": shown.care, "build": shown.build, "salvage": shown.salvage,
+		"idle": roundi(lab.idle), "workers": lab.workers,
 		"productivity": roundi(lab.productivity * 100.0)})
 	if not lab.changed and _pending.is_empty():
 		_labor_label.text += "  " + tr("HUD_LABOR_INITIAL")
+	_buildings_label.text = _buildings_text(s)
 	var mods: PackedStringArray = []
 	for m in s.modifiers:
 		mods.append("%s %s" % [m.key, ("×%.2f" % m.mul) if m.mul != 1.0 else "+" + _num(m.add)])
 	_modifiers_label.text = tr("HUD_MODIFIERS") + " " + " · ".join(mods)
+
+
+func _buildings_text(s: Dictionary) -> String:
+	var b: Dictionary = s.buildings
+	var days_left: int = s.season_days - s.day_in_season
+	var parts: PackedStringArray = []
+	var by_type := {}
+	for inst in b.instances:
+		by_type[inst.type] = by_type.get(inst.type, []) + [inst]
+	var types := by_type.keys()
+	types.sort()
+	for t in types:
+		var cond := 0.0
+		var end := 0.0
+		for inst in by_type[t]:
+			cond += inst.condition
+			end += Game.sim.buildings.forecast_condition(inst, s.season, days_left)
+		var n: int = by_type[t].size()
+		parts.append(tr("HUD_BUILDING").format({"name": tr("BUILDING_" + t.to_upper()),
+			"count": n, "condition": roundi(cond / n), "end": roundi(end / n)}))
+	var text := tr("HUD_BUILDINGS") + " " + (" · ".join(parts) if not parts.is_empty() else "—")
+	text += "\n" + tr("HUD_MATERIALS").format({"materials": roundi(b.materials),
+		"ruins": roundi(b.ruins_remaining), "ruins_total": roundi(b.ruins_initial)})
+	if not b.queue.is_empty():
+		var job: Dictionary = b.queue[0]
+		var key := "HUD_QUEUE_WORKING" if job.started else "HUD_QUEUE_WAITING"
+		text += "  " + tr(key).format({"name": tr("BUILDING_" + job.type.to_upper()),
+			"progress": roundi(job.progress), "cost": roundi(job.cost_points),
+			"materials": roundi(job.cost_materials), "queued": b.queue.size()})
+	return text
 
 
 ## Dias até o estoque acabar com o saldo diário `net` (< 0). Arredonda para cima:

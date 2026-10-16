@@ -16,7 +16,11 @@ const SEASON_KEYS: PackedStringArray = [
 	"gather_mult", "farm_mult"]
 ## Tarefas de mão de obra (D-031). Fixas no código: cada uma tem regra própria em
 ## SimLabor; os números vêm de labor.json.
-const TASK_IDS: PackedStringArray = ["water", "farm", "care"]
+const TASK_IDS: PackedStringArray = ["water", "farm", "care", "build", "salvage"]
+## Chaves de modificador que prédios podem afetar (D-032).
+const BUILDING_EFFECT_KEYS: PackedStringArray = [
+	"water_capacity", "food_capacity", "water_consumption", "food_consumption",
+	"water_loss_rate", "food_loss_rate", "farm_mult", "gather_mult", "health_drift"]
 
 var errors: PackedStringArray = []
 
@@ -34,6 +38,7 @@ func load_all(dir: String = DEFAULT_DIR) -> bool:
 		"resources": _load_json(dir.path_join("resources.json")),
 		"population": _load_json(dir.path_join("population.json")),
 		"labor": _load_json(dir.path_join("labor.json")),
+		"buildings": _load_json(dir.path_join("buildings.json")),
 	}
 	var parsed := {}
 	if loaded.sim is Dictionary:
@@ -53,6 +58,9 @@ func load_all(dir: String = DEFAULT_DIR) -> bool:
 		parsed.population = _parse_population(loaded.population, "population.json")
 	if loaded.labor is Dictionary:
 		parsed.labor = _parse_labor(loaded.labor, "labor.json")
+	if loaded.buildings is Dictionary:
+		parsed.buildings = _parse_buildings(loaded.buildings, "buildings.json",
+			parsed.calendar if calendar_ok else {})
 	if not errors.is_empty():
 		return false
 	_data = parsed
@@ -64,7 +72,7 @@ func is_loaded() -> bool:
 
 
 ## Dados já normalizados (ints como int) de um sistema: "sim", "calendar",
-## "season", "resources", "population" ou "labor".
+## "season", "resources", "population", "labor" ou "buildings".
 func section(name: String) -> Dictionary:
 	return _data.get(name, {})
 
@@ -313,6 +321,98 @@ func _parse_labor(d: Dictionary, src: String) -> Dictionary:
 	_check_keys(alloc, Array(TASK_IDS), where)
 	for id in TASK_IDS:
 		out.initial_allocation[id] = _int(alloc, id, where, 0, 10000)
+	return out
+
+
+func _parse_buildings(d: Dictionary, src: String, calendar: Dictionary) -> Dictionary:
+	_check_keys(d, ["work_points_per_worker", "points_per_condition", "low_condition_threshold",
+		"low_condition_wear_mult", "repair_cost_mult", "salvage_per_worker", "salvage_fatigue",
+		"max_queue", "types"], src)
+	var season_ids: Array = []
+	for cs in calendar.get("seasons", []):
+		season_ids.append(cs.id)
+	var out := {
+		"work_points_per_worker": _float(d, "work_points_per_worker", src, 0.0, 1000.0),
+		"points_per_condition": _float(d, "points_per_condition", src, 0.0, 1000.0),
+		"low_condition_threshold": _float(d, "low_condition_threshold", src, 0.0, 100.0),
+		"low_condition_wear_mult": _float(d, "low_condition_wear_mult", src, 0.0, 10.0),
+		"repair_cost_mult": _season_floats(d, "repair_cost_mult", src, season_ids, 0.0, 10.0),
+		"salvage_per_worker": _float(d, "salvage_per_worker", src, 0.0, 1000.0),
+		"salvage_fatigue": _float(d, "salvage_fatigue", src, 0.0, 100.0),
+		"max_queue": _int(d, "max_queue", src, 1, 100),
+		"types": {},
+	}
+	if not d.has("types"):
+		return out
+	if not d.types is Dictionary or d.types.is_empty():
+		errors.append("%s: types precisa ser um objeto {} com ao menos um prédio" % src)
+		return out
+	for id in d.types.keys():
+		var where := "%s: types.%s" % [src, id]
+		if not id is String or _id_regex.search(id) == null:
+			errors.append("%s: id inválido (use minúsculas, dígitos e _)" % where)
+			continue
+		if not d.types[id] is Dictionary:
+			errors.append("%s: precisa ser um objeto {}" % where)
+			continue
+		var t: Dictionary = d.types[id]
+		if t.get("ruins") == true:
+			_check_keys(t, ["ruins", "materials"], where)
+			out.types[id] = {"ruins": true, "materials": _float(t, "materials", where, 0.0, 1000000.0)}
+			continue
+		_check_keys(t, ["cost_materials", "cost_points", "wear", "effects"], where)
+		var entry := {
+			"ruins": false,
+			"cost_materials": _float(t, "cost_materials", where, 0.0, 1000000.0),
+			"cost_points": _float(t, "cost_points", where, 0.01, 1000000.0),
+			"wear": _season_floats(t, "wear", where, season_ids, 0.0, 100.0),
+			"effects": [],
+		}
+		var effects := _array(t, "effects", where)
+		for i in effects.size():
+			var ew := "%s.effects[%d]" % [where, i]
+			if not effects[i] is Dictionary:
+				errors.append("%s: precisa ser um objeto {}" % ew)
+				continue
+			var e: Dictionary = effects[i]
+			for k in e.keys():
+				if not k in ["key", "add", "mul", "seasons", "requires_water"]:
+					errors.append("%s: chave desconhecida '%s'" % [ew, k])
+			if e.has("add") == e.has("mul"):
+				errors.append("%s: precisa de add ou mul (um dos dois)" % ew)
+			var key: Variant = e.get("key")
+			if not key is String or not BUILDING_EFFECT_KEYS.has(key):
+				errors.append("%s: key inválida '%s'" % [ew, str(key)])
+				continue
+			var eff := {"key": key, "requires_water": _bool(e, "requires_water", ew), "seasons": []}
+			if e.has("mul"):
+				eff.mul = _float(e, "mul", ew, 0.0, 10.0)
+			else:
+				eff.add = _float(e, "add", ew, -100000.0, 100000.0)
+			for sid in _array(e, "seasons", ew):
+				if not season_ids.is_empty() and not season_ids.has(sid):
+					errors.append("%s: estação '%s' não existe em calendar.json" % [ew, str(sid)])
+				else:
+					eff.seasons.append(sid)
+			entry.effects.append(eff)
+		out.types[id] = entry
+	return out
+
+
+## Objeto {estação: número} com exatamente as estações do calendário.
+func _season_floats(d: Dictionary, key: String, where: String, season_ids: Array,
+		lo: float, hi: float) -> Dictionary:
+	var out := {}
+	if not d.has(key):
+		return out
+	if not d[key] is Dictionary:
+		errors.append("%s: %s precisa ser um objeto {estação: número}" % [where, key])
+		return out
+	var m: Dictionary = d[key]
+	if not season_ids.is_empty():
+		_check_keys(m, season_ids, "%s: %s" % [where, key])
+	for sid in m.keys():
+		out[sid] = _float(m, sid, "%s: %s" % [where, key], lo, hi)
 	return out
 
 

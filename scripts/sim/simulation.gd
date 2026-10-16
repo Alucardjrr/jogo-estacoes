@@ -2,12 +2,15 @@ class_name Simulation
 extends RefCounted
 ## Raiz da simulação (D-020). Roda sem tela: a apresentação só lê snapshot()
 ## e envia comandos. Ordem do tick conforme GDD 10; existem os passos
-## 0 (comandos), 1 (Calendar), 2 (Season), 5 (Labor), 7 (Resources) e 8 (Population).
+## 0 (comandos), 1 (Calendar), 2 (Season), 5 (Labor), 6 (Buildings), 7 (Resources)
+## e 8 (Population).
 ##
 ## Comandos de jogo:
 ##   {"type": "set_labor", "task": "water"|"farm"|"care", "value": int ≥ 0}
 ##   {"type": "adjust_labor", "task": ..., "delta": int} — soma ao pedido atual
-## Recusados viram evento "command_rejected" com o motivo; aceitos, "labor_changed".
+##   {"type": "build", "building": id} — põe na fila de obras
+## Recusados viram evento "command_rejected" com o motivo; aceitos, "labor_changed"
+## ou "build_queued".
 
 var data := DataRegistry.new()
 var loop: SimLoop
@@ -16,6 +19,7 @@ var season: SimSeason
 var resources: SimResources
 var population: SimPopulation
 var labor: SimLabor
+var buildings: SimBuildings
 var modifiers := ModifierStack.new()
 
 var _events: Array[Dictionary] = []
@@ -35,6 +39,7 @@ func setup(seed_number: int = -1, data_dir: String = DataRegistry.DEFAULT_DIR) -
 	modifiers.register_keys(_modifier_keys())
 	population = SimPopulation.new(data.section("population"))
 	labor = SimLabor.new(data.section("labor"))
+	buildings = SimBuildings.new(data.section("buildings"))
 	season.publish(calendar, modifiers)  # tela já mostra as taxas do dia 1
 	labor.step(population.people(), population.health, modifiers)
 	_events.clear()
@@ -60,7 +65,9 @@ func step_day() -> void:
 	# 3..4: Forecast, Social — próximas etapas.
 	# 5. Labor publica a produção do dia (lê pessoas/saúde do fim de ontem)
 	labor.step(population.people(), population.health, modifiers)
-	# 6: Buildings — próxima etapa.
+	# 6. Buildings: saque, desgaste, obras, efeitos (falta de água de ontem)
+	_events.append_array(buildings.step(labor, calendar.season_id(),
+		resources.last_flow.water.deficit > 0.0, modifiers))
 	# 7. Resources
 	_events.append_array(resources.step(population.people(), modifiers))
 	# 8. Population (lê o déficit do dia em Resources)
@@ -98,6 +105,7 @@ func snapshot() -> Dictionary:
 		"health": population.health,
 		"shortage_streak": population.shortage_streak,
 		"labor": labor.snapshot(),
+		"buildings": buildings.snapshot(),
 		"resources": _resources_snapshot(),
 		"modifiers": modifiers.entries(),
 		"seed": loop.seed_value,
@@ -110,6 +118,7 @@ func _modifier_keys() -> PackedStringArray:
 	var keys := DataRegistry.SEASON_KEYS.duplicate()
 	for id in DataRegistry.RESOURCE_IDS:
 		keys.append(id + "_consumption")
+		keys.append(id + "_capacity")
 	return keys
 
 
@@ -126,6 +135,15 @@ func _apply_command(command: Dictionary) -> void:
 	match command.type:
 		"set_labor", "adjust_labor":
 			_apply_labor(command)
+		"build":
+			var id: Variant = command.get("building")
+			if not id is String or not buildings.is_buildable(id):
+				_reject(command, "prédio inválido")
+			elif not buildings.can_enqueue():
+				_reject(command, "fila de obras cheia")
+			else:
+				buildings.enqueue(id)
+				_events.append({"type": "build_queued", "building": id})
 		_:
 			_reject(command, "tipo desconhecido")
 

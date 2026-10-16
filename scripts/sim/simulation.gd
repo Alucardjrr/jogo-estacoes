@@ -2,17 +2,15 @@ class_name Simulation
 extends RefCounted
 ## Raiz da simulação (D-020). Roda sem tela: a apresentação só lê snapshot()
 ## e envia comandos. Ordem do tick conforme GDD 10; existem os passos
-## 0 (comandos), 1 (Calendar), 2 (Season) e 7 (Resources).
+## 0 (comandos), 1 (Calendar), 2 (Season), 7 (Resources) e 8 (Population).
 
 var data := DataRegistry.new()
 var loop: SimLoop
 var calendar: SimCalendar
 var season: SimSeason
 var resources: SimResources
+var population: SimPopulation
 var modifiers := ModifierStack.new()
-## Provisório: até Population existir, a população vem de resources.json
-## (placeholder_population). Sai quando Population entrar.
-var population := 0
 
 var _events: Array[Dictionary] = []
 
@@ -28,7 +26,7 @@ func setup(seed_number: int = -1, data_dir: String = DataRegistry.DEFAULT_DIR) -
 	season = SimSeason.new(data.section("season"))
 	resources = SimResources.new(data.section("resources"))
 	modifiers = ModifierStack.new()
-	population = data.section("resources").placeholder_population
+	population = SimPopulation.new(data.section("population"))
 	season.publish(calendar, modifiers)  # tela já mostra as taxas do dia 1
 	_events.clear()
 	return true
@@ -52,8 +50,10 @@ func step_day() -> void:
 	season.publish(calendar, modifiers)
 	# 3..6: Forecast, Social, Labor, Buildings — próximas etapas.
 	# 7. Resources
-	_events.append_array(resources.step(population, modifiers))
-	# 8..10: Population, Social, Narrative — próximas etapas.
+	_events.append_array(resources.step(population.people(), modifiers))
+	# 8. Population (lê o déficit do dia em Resources)
+	_events.append_array(population.step(resources.last_flow, modifiers, loop.rng))
+	# 9..10: Social, Narrative — próximas etapas.
 
 
 ## Avança pelo relógio de tempo real. Retorna quantos dias passaram.
@@ -81,7 +81,10 @@ func snapshot() -> Dictionary:
 		"day_in_season": calendar.day_in_season(),
 		"season_days": calendar.season_length_days(),
 		"intensity": season.intensity(calendar),
-		"population": population,
+		"population": population.people(),
+		"families": population.families.size(),
+		"health": population.health,
+		"shortage_streak": population.shortage_streak,
 		"resources": _resources_snapshot(),
 		"modifiers": modifiers.entries(),
 		"seed": loop.seed_value,

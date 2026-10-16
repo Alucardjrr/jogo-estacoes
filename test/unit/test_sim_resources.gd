@@ -1,7 +1,7 @@
 extends GutTest
 ## SimResources: entrada → consumo → teto → perda; falta vira evento.
 
-const CFG := {"placeholder_population": 10, "resources": {
+const CFG := {"resources": {
 	"water": {"initial": 100.0, "capacity": 200.0, "per_capita_daily": 1.0},
 	"food": {"initial": 50.0, "capacity": 100.0, "per_capita_daily": 2.0}}}
 

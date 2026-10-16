@@ -1,10 +1,10 @@
 extends Control
-## Tela de debug do protótipo: data, estação, intensidade, recursos, modificadores,
+## Tela de debug do protótipo: data, estação, intensidade, população, recursos, modificadores,
 ## velocidade, idioma e log de viradas.
 ## Só lê o estado de `Game`; não altera a simulação. Textos via tr() (data/text/ui.csv)
 ## e refeitos quando o idioma muda.
 
-const LOG_LINES := 8
+const LOG_LINES := 12
 
 var _date_label := Label.new()
 var _season_label := Label.new()
@@ -108,7 +108,7 @@ func _refresh_all() -> void:
 func _on_day_passed(snapshot: Dictionary, events: Array[Dictionary]) -> void:
 	_refresh(snapshot)
 	for e in events:
-		if e.type in ["season_changed", "year_changed"]:
+		if e.type in ["season_changed", "year_changed", "death", "family_left", "colony_empty"]:
 			_log_events.append(e)
 	while _log_events.size() > LOG_LINES:
 		_log_events.remove_at(0)
@@ -126,8 +126,9 @@ func _refresh(s: Dictionary) -> void:
 	_season_label.text = tr("HUD_SEASON").format(
 		{"season": _season_name(s.season), "day": s.day_in_season, "total": s.season_days})
 	_season_label.modulate = Color("ffb36b") if s.season_severe else Color("cfe8c4")
-	_intensity_label.text = tr("HUD_INTENSITY").format(
-		{"value": "%.2f" % s.intensity, "population": s.population})
+	_intensity_label.text = tr("HUD_INTENSITY").format({"value": "%.2f" % s.intensity}) \
+		+ "   " + tr("HUD_POPULATION").format({"people": s.population,
+			"families": s.families, "health": roundi(s.health)})
 	for id in DataRegistry.RESOURCE_IDS:
 		var r: Dictionary = s.resources[id]
 		var label: Label = _resource_labels[id]
@@ -168,6 +169,12 @@ func _render_log() -> void:
 					{"season": _season_name(e.to), "year": e.year}))
 			"year_changed":
 				lines.append(tr("EVENT_YEAR_CHANGED").format({"year": e.year}))
+			"death":
+				lines.append(tr("EVENT_DEATH").format({"family": e.family}))
+			"family_left":
+				lines.append(tr("EVENT_FAMILY_LEFT").format({"family": e.family, "size": e.size}))
+			"colony_empty":
+				lines.append(tr("EVENT_COLONY_EMPTY"))
 	_log_label.text = "\n".join(lines)
 
 
